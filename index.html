@@ -536,27 +536,25 @@ function loadSales(){
   const tbl=document.querySelector("#salesTbl tbody")
   tbl.innerHTML=""
 
-  // build date boundaries if provided
-  const fromDate = from ? new Date(from + 'T00:00:00') : null
-  const toDate = to ? new Date(to + 'T23:59:59') : null
+  let counter = 1
+  sales.forEach((s)=>{
+    const dObj=new Date(s.date)
+    const d=dObj.toLocaleDateString()
 
-  sales.forEach((s,i)=>{
-    const dObj = parseStoredDate(s.date)
-    const dDisplay = dObj ? dObj.toLocaleDateString('id-ID') : 'Invalid Date'
-
-    let valid = true
-    if(fromDate && (!dObj || dObj < fromDate)) valid = false
-    if(toDate && (!dObj || dObj > toDate)) valid = false
+    let valid=true
+    if(from && dObj < new Date(from)) valid=false
+    if(to && dObj > new Date(to)) valid=false
 
     if(valid){
       tbl.innerHTML+=`
         <tr>
-          <td>${i+1}</td>
-          <td>${dDisplay}</td>
+          <td>${counter}</td>
+          <td>${d}</td>
           <td>${s.invoice}</td>
           <td>${s.items.map(x=>x.name+" x"+x.qty).join(", ")}</td>
           <td>Rp ${s.total.toLocaleString()}</td>
         </tr>`
+      counter++
     }
   })
 }
