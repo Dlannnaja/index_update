@@ -422,7 +422,10 @@ function savePrinterPreference(){
 function checkout(){
   if(cart.length===0) return alert("Keranjang kosong")
   const invoice="INV"+Date.now()
-  const date=getLocalDateTime() // simpan lokal format parseable
+
+  const now = new Date()
+  const date = now.toISOString()                // untuk filter & simpan aman
+  const dateDisplay = now.toLocaleString()      // untuk tampilan laporan
 
   let total=0
   cart.forEach(c=>{
@@ -431,7 +434,7 @@ function checkout(){
     if(p) p.qty-=c.qty
   })
 
-  const transaction={invoice,date,items:[...cart],total}
+  const transaction={invoice,date,dateDisplay,items:[...cart],total}
   sales.push(transaction)
   localStorage.setItem("sales",JSON.stringify(sales))
   localStorage.setItem("products",JSON.stringify(products))
@@ -443,7 +446,6 @@ function checkout(){
     if(!preferred){
       alert("Cetak otomatis aktif tetapi tidak ada printer yang dipilih. Silahkan pilih & simpan printer terlebih dahulu.")
     }else{
-      // coba cetak; jika ada error saat memanggil print, tangkap dan beri alert
       try{
         printReceipt(transaction)
       }catch(e){
@@ -538,8 +540,8 @@ function loadSales(){
 
   let counter = 1
   sales.forEach((s)=>{
-    const dObj=new Date(s.date)
-    const d=dObj.toLocaleDateString()
+    const dObj = new Date(s.date)                         // selalu ISO
+    const d = s.dateDisplay || dObj.toLocaleString()      // tampilan lokal
 
     let valid=true
     if(from && dObj < new Date(from)) valid=false
