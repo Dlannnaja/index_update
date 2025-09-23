@@ -613,12 +613,16 @@ function getCsvDateFromRecord(rec){
 function exportSales(){
   if(sales.length === 0) return alert("Tidak ada data penjualan");
 
-  let csv = "No,Tanggal,Invoice,Item,Total\n";
+  // pakai titik koma (;) biar aman di Excel / Google Sheets Indonesia
+  let csv = "No;Tanggal;Invoice;Item;Total\n";
   let counter = 1;
+
   sales.forEach((s) => {
     const d = getCsvDateFromRecord(s); // ambil tanggal yang aman
     const items = s.items.map(x => `${x.name} x${x.qty}`).join(" | ");
-    csv += `${counter},${d},${s.invoice},"${items}",${s.total}\n`;
+
+    // bungkus kolom teks dengan "..." supaya tidak pecah
+    csv += `${counter};"${d}";"${s.invoice}";"${items}";"${s.total}"\n`;
     counter++;
   });
 
