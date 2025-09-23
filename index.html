@@ -45,6 +45,9 @@ th{font-weight:600;color:#333}
 #guideOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:999;display:none}
 #guideBox{background:#fff;padding:20px;border-radius:12px;max-width:400px;text-align:center;box-shadow:0 0 20px rgba(0,0,0,0.2);}
 #guideBox button{margin:10px 5px;}
+.printer-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.printer-row select{min-width:160px}
+.info-small{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -122,9 +125,23 @@ th{font-weight:600;color:#333}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
           <div class="note">Total: <strong id="total">Rp 0</strong></div>
           <div>
-            <label><input type="checkbox" id="autoPrint" checked /> Cetak struk otomatis</label>
-            <button id="checkoutBtn" onclick="checkout()" disabled>Selesaikan Penjualan</button>
-            <button class="ghost" onclick="clearCart()">Kosongkan</button>
+            <!-- autoPrint default: NOT checked -->
+            <label><input type="checkbox" id="autoPrint" /> Cetak struk otomatis</label>
+            <div class="printer-row">
+              <select id="printerSelect">
+                <option value="">Pilih printer (belum tersimpan)</option>
+                <!-- user can set a friendly name; browsers can't enumerate printers -->
+                <option value="Printer Lokal">Printer Lokal</option>
+                <option value="Printer Bluetooth">Printer Bluetooth</option>
+                <option value="Printer Jaringan">Printer Jaringan</option>
+              </select>
+              <button class="small ghost" onclick="savePrinterPreference()">Simpan</button>
+            </div>
+            <div class="info-small">Jika auto print aktif: pastikan pilih & simpan printer. Jika tidak, proses cetak akan diblokir dan muncul peringatan.</div>
+            <div style="margin-top:6px">
+              <button id="checkoutBtn" onclick="checkout()" disabled>Selesaikan Penjualan</button>
+              <button class="ghost" onclick="clearCart()">Kosongkan</button>
+            </div>
           </div>
         </div>
       </div>
@@ -202,12 +219,51 @@ th{font-weight:600;color:#333}
   </div>
 </div>
 
+<!-- receipt area template (hidden) -->
+<div id="receiptTemplate" style="display:none">
+  <div id="receiptArea"></div>
+</div>
+
 <script>
+/* ---------- data ---------- */
 let products = JSON.parse(localStorage.getItem('products')||'[]')
 let sales = JSON.parse(localStorage.getItem('sales')||'[]')
 let restocks = JSON.parse(localStorage.getItem('restocks')||'[]')
 let cart = []
 
+/* ---------- utility: reliable local datetime string ---------- */
+function getLocalDateTime(){
+  const d=new Date();
+  const yyyy=d.getFullYear();
+  const mm=String(d.getMonth()+1).padStart(2,"0");
+  const dd=String(d.getDate()).padStart(2,"0");
+  const hh=String(d.getHours()).padStart(2,"0");
+  const mi=String(d.getMinutes()).padStart(2,"0");
+  const ss=String(d.getSeconds()).padStart(2,"0");
+  // format yang mudah di-parse kembali: "YYYY-MM-DD HH:mm:ss"
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function parseStoredDate(dStr){
+  // dStr diharapkan format "YYYY-MM-DD HH:mm:ss"
+  if(!dStr) return null;
+  let iso = dStr;
+  if(dStr.indexOf(' ') !== -1 && dStr.indexOf('T') === -1){
+    iso = dStr.replace(' ', 'T');
+  }
+  // beberapa fallback: jika masih invalid, coba Date.parse direct
+  const d = new Date(iso);
+  if(isNaN(d.getTime())){
+    // try replace slashes with hyphen
+    const alt = dStr.replace(/\//g,'-').replace(' ', 'T');
+    const d2 = new Date(alt);
+    if(isNaN(d2.getTime())) return null;
+    return d2;
+  }
+  return d;
+}
+
+/* ---------- render product list ---------- */
 function render(){
   const tbl=document.querySelector("#tbl tbody")
   const search=document.querySelector("#search").value.toLowerCase()
@@ -230,6 +286,7 @@ function render(){
   updateRestockDropdown()
 }
 
+/* ---------- product CRUD ---------- */
 function submitProduct(){
   const sku=document.getElementById("sku").value.trim()
   const name=document.getElementById("name").value.trim()
@@ -274,6 +331,7 @@ function deleteProduct(sku){
 
 function updateRestockDropdown(){
   const sel=document.getElementById("restockName")
+  if(!sel) return
   sel.innerHTML='<option value="">Pilih Produk...</option>'
   products.forEach(p=>{
     const opt=document.createElement("option")
@@ -282,6 +340,7 @@ function updateRestockDropdown(){
   })
 }
 
+/* ---------- restock (simpan dengan format dapat diparse) ---------- */
 function restockProduct(){
   const sku=document.getElementById("restockName").value
   const qty=parseInt(document.getElementById("restockQty").value)
@@ -293,7 +352,7 @@ function restockProduct(){
   localStorage.setItem("products",JSON.stringify(products))
 
   restocks.push({
-    date:new Date().toLocaleString(), // pakai lokal
+    date:getLocalDateTime(), // simpan format "YYYY-MM-DD HH:mm:ss"
     sku:p.sku,
     name:p.name,
     qty,
@@ -304,7 +363,7 @@ function restockProduct(){
   render(); document.getElementById("restockQty").value=""
 }
 
-// CART & CHECKOUT
+/* ---------- CART & CHECKOUT ---------- */
 function addToCart(sku){
   const p=products.find(x=>x.sku===sku)
   if(!p) return alert("Produk tidak ditemukan")
@@ -346,10 +405,24 @@ function renderCart(){
 function removeFromCart(sku){cart=cart.filter(c=>c.sku!==sku); renderCart()}
 function clearCart(){cart=[]; renderCart()}
 
+/* ---------- printer preference helpers ---------- */
+function loadPrinterPreference(){
+  const p = localStorage.getItem('preferredPrinter') || ''
+  const sel = document.getElementById('printerSelect')
+  if(sel) sel.value = p
+}
+function savePrinterPreference(){
+  const sel = document.getElementById('printerSelect')
+  if(!sel) return
+  localStorage.setItem('preferredPrinter', sel.value)
+  alert(sel.value ? 'Preferensi printer disimpan: ' + sel.value : 'Preferensi printer dikosongkan')
+}
+
+/* ---------- checkout with robust date + printer check ---------- */
 function checkout(){
   if(cart.length===0) return alert("Keranjang kosong")
   const invoice="INV"+Date.now()
-  const date=new Date().toLocaleString() // pakai lokal
+  const date=getLocalDateTime() // simpan lokal format parseable
 
   let total=0
   cart.forEach(c=>{
@@ -363,27 +436,65 @@ function checkout(){
   localStorage.setItem("sales",JSON.stringify(sales))
   localStorage.setItem("products",JSON.stringify(products))
 
-  if(document.getElementById("autoPrint").checked) printReceipt(transaction)
+  // cek auto print & preferensi printer
+  const auto = document.getElementById("autoPrint").checked
+  const preferred = localStorage.getItem('preferredPrinter') || ''
+  if(auto){
+    if(!preferred){
+      alert("Cetak otomatis aktif tetapi tidak ada printer yang dipilih. Silahkan pilih & simpan printer terlebih dahulu.")
+    }else{
+      // coba cetak; jika ada error saat memanggil print, tangkap dan beri alert
+      try{
+        printReceipt(transaction)
+      }catch(e){
+        console.error(e)
+        alert("Terjadi kesalahan saat mencoba mencetak. Silahkan hubungkan printer terlebih dahulu.")
+      }
+    }
+  }
 
   cart=[]
   renderCart(); render(); renderFinalStock()
   alert("Transaksi berhasil! Invoice: "+invoice)
 }
 
+/* ---------- print receipt (opens print dialog) ---------- */
 function printReceipt(t){
-  let html=`<h2>Struk Pembelian</h2><p>Invoice: ${t.invoice}</p><p>Tanggal: ${new Date(t.date).toLocaleString()}</p><table style="width:100%;border-collapse:collapse;">`
-  html+=`<tr><th>Nama</th><th>Qty</th><th>Subtotal</th></tr>`
+  // buat konten struk
+  let html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:8px">`
+  html += `<h3 style="margin:4px 0">Struk Pembelian</h3>`
+  html += `<div>Invoice: ${t.invoice}</div>`
+  html += `<div>Tanggal: ${t.date}</div>`
+  html += `<hr/>`
+  html += `<table style="width:100%;border-collapse:collapse;font-size:12px">`
+  html += `<tr><th align="left">Nama</th><th>Qty</th><th align="right">Subtotal</th></tr>`
   t.items.forEach(i=>{
-    html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>Rp ${(i.price*i.qty).toLocaleString()}</td></tr>`
+    html += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">Rp ${(i.price*i.qty).toLocaleString()}</td></tr>`
   })
-  html+=`</table><h3>Total: Rp ${t.total.toLocaleString()}</h3>`
-  const w=window.open("","Struk","width=400,height=600")
+  html += `</table><hr/>`
+  html += `<h4 style="text-align:right;margin:6px 0">Total: Rp ${t.total.toLocaleString()}</h4>`
+  html += `</div>`
+
+  const w = window.open("","_blank","width=400,height=600")
+  if(!w) {
+    throw new Error("Popup blocked")
+  }
   w.document.write(html)
   w.document.close()
-  w.print()
+  // fokus & print
+  w.focus()
+  // window.print usually doesn't throw, but wrap in try/catch anyway
+  try{
+    w.print()
+    // don't auto-close — some printers need selection; close after small timeout
+    setTimeout(()=>{ try{ w.close() }catch(e){} }, 1200)
+  }catch(e){
+    try{ w.close() }catch(_) {}
+    throw e
+  }
 }
 
-// SCAN
+/* ---------- SCAN ---------- */
 let html5QrcodeScanner=null, scanTarget=null
 function startScan(target){
   scanTarget=target
@@ -394,9 +505,12 @@ function startScan(target){
   html5QrcodeScanner.start({facingMode:"environment"}, config, qrCodeMessage=>{
     handleScan(qrCodeMessage)
     if(document.getElementById("scanMode").value==="single" && document.getElementById("autoSell").checked) stopScan()
+  }).catch(err=>{
+    console.error(err)
+    alert("Gagal mengakses kamera: " + err)
   })
 }
-function stopScan(){if(html5QrcodeScanner){html5QrcodeScanner.stop();html5QrcodeScanner=null}}
+function stopScan(){if(html5QrcodeScanner){html5QrcodeScanner.stop().catch(()=>{});html5QrcodeScanner=null}}
 function handleScan(msg){
   if(scanTarget==="sell" || document.getElementById("autoSell").checked){
     addToCart(msg)
@@ -407,7 +521,7 @@ function handleScan(msg){
 }
 function scanSku(){startScan('sku')}
 
-// TABS
+/* ---------- TABS ---------- */
 function openTab(id){
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"))
   document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"))
@@ -415,26 +529,30 @@ function openTab(id){
   document.getElementById(id).classList.add("active")
 }
 
-// REPORTS
+/* ---------- REPORTS with robust parsing & date filter ---------- */
 function loadSales(){
   const from=document.getElementById("filterFrom").value
   const to=document.getElementById("filterTo").value
   const tbl=document.querySelector("#salesTbl tbody")
   tbl.innerHTML=""
 
-  sales.forEach((s,i)=>{
-    const dObj=new Date(s.date)
-    const d=dObj.toLocaleDateString() // tampilkan lokal
+  // build date boundaries if provided
+  const fromDate = from ? new Date(from + 'T00:00:00') : null
+  const toDate = to ? new Date(to + 'T23:59:59') : null
 
-    let valid=true
-    if(from && dObj < new Date(from)) valid=false
-    if(to && dObj > new Date(to)) valid=false
+  sales.forEach((s,i)=>{
+    const dObj = parseStoredDate(s.date)
+    const dDisplay = dObj ? dObj.toLocaleDateString('id-ID') : 'Invalid Date'
+
+    let valid = true
+    if(fromDate && (!dObj || dObj < fromDate)) valid = false
+    if(toDate && (!dObj || dObj > toDate)) valid = false
 
     if(valid){
       tbl.innerHTML+=`
         <tr>
           <td>${i+1}</td>
-          <td>${d}</td>
+          <td>${dDisplay}</td>
           <td>${s.invoice}</td>
           <td>${s.items.map(x=>x.name+" x"+x.qty).join(", ")}</td>
           <td>Rp ${s.total.toLocaleString()}</td>
@@ -448,11 +566,12 @@ function loadRestock(){
   tbl.innerHTML=""
 
   restocks.forEach((r,i)=>{
-    const d=new Date(r.date).toLocaleDateString() // tampilkan lokal
+    const dObj = parseStoredDate(r.date)
+    const dDisplay = dObj ? dObj.toLocaleDateString('id-ID') : 'Invalid Date'
     tbl.innerHTML+=`
       <tr>
         <td>${i+1}</td>
-        <td>${d}</td>
+        <td>${dDisplay}</td>
         <td>${r.sku}</td>
         <td>${r.name}</td>
         <td>${r.qty}</td>
@@ -461,31 +580,34 @@ function loadRestock(){
   })
 }
 
+/* ---------- CSV export (safely parse date) ---------- */
 function exportSales(){
   if(sales.length === 0) return alert("Tidak ada data penjualan");
 
   let csv = "No,Tanggal,Invoice,Item,Total\n";
   sales.forEach((s, i) => {
-    const d = new Date(s.date).toISOString().slice(0,10);
+    const dObj = parseStoredDate(s.date)
+    const d = dObj ? dObj.toISOString().slice(0,10) : ''
     const items = s.items.map(x => `${x.name} x${x.qty}`).join(" | ");
     csv += `${i+1},${d},${s.invoice},"${items}",${s.total}\n`;
   });
 
   downloadCSV(csv, "laporan_penjualan.csv");
 }
-function printSales(){window.print()}
+function printSales(){ window.print() }
 function exportRestock(){
   if(restocks.length === 0) return alert("Tidak ada data restock");
 
   let csv = "No,Tanggal,SKU,Nama,Jumlah,StokAkhir\n";
   restocks.forEach((r, i) => {
-    const d = new Date(r.date).toISOString().slice(0,10);
+    const dObj = parseStoredDate(r.date)
+    const d = dObj ? dObj.toISOString().slice(0,10) : ''
     csv += `${i+1},${d},${r.sku},${r.name},${r.qty},${r.stockAfter}\n`;
   });
 
   downloadCSV(csv, "laporan_restock.csv");
 }
-function printRestock(){window.print()}
+function printRestock(){ window.print() }
 
 function downloadCSV(content, filename){
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
@@ -498,7 +620,7 @@ function downloadCSV(content, filename){
   document.body.removeChild(link);
 }
 
-// final stock
+/* ---------- final stock ---------- */
 function renderFinalStock(){
   const tbl=document.querySelector("#finalStockTbl tbody")
   tbl.innerHTML=""
@@ -507,13 +629,24 @@ function renderFinalStock(){
   })
 }
 
-// GUIDE
+/* ---------- GUIDE ---------- */
 function startGuide(){alert("Guide: 1. Tambah produk, 2. Restock, 3. Scan, 4. Keranjang, 5. Checkout & cetak"); skipGuide()}
 function skipGuide(){document.getElementById("guideOverlay").style.display="none"}
 
-// init
-render(); renderFinalStock(); setInterval(renderFinalStock,5000)
-document.getElementById("guideOverlay").style.display="flex"
+/* ---------- INIT ---------- */
+function init(){
+  // ensure autoPrint is NOT checked on load (safety)
+  const autoPrintEl = document.getElementById('autoPrint')
+  if(autoPrintEl) autoPrintEl.checked = false
+
+  // load saved printer preference
+  loadPrinterPreference()
+
+  render(); renderFinalStock(); setInterval(renderFinalStock,5000)
+  document.getElementById("guideOverlay").style.display="flex"
+}
+
+init()
 </script>
 </body>
 </html>
