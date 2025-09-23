@@ -581,31 +581,48 @@ function loadRestock(){
 }
 
 /* ---------- CSV export (safely parse date) ---------- */
+// helper untuk ambil tanggal CSV
+function getCsvDateFromRecord(rec){
+  let dObj = null;
+
+  // coba parse ISO atau string yang ada
+  if(rec && rec.date){
+    dObj = parseStoredDate(rec.date);
+  }
+  if((!dObj || isNaN(dObj)) && rec && rec.dateDisplay){
+    dObj = parseStoredDate(rec.dateDisplay);
+  }
+
+  if(dObj && !isNaN(dObj)){
+    return dObj.toISOString().slice(0,10); // YYYY-MM-DD
+  }
+
+  // fallback: coba ekstrak pola DD-MM-YYYY
+  if(rec && rec.dateDisplay && typeof rec.dateDisplay === 'string'){
+    const s = rec.dateDisplay;
+    let m = s.match(/(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+    if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = s.match(/(\d{4})[-\/](\d{2})[-\/](\d{2})/);
+    if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+    return s; // tampilkan apa adanya kalau tidak bisa diparse
+  }
+
+  return "";
+}
+
 function exportSales(){
   if(sales.length === 0) return alert("Tidak ada data penjualan");
 
   let csv = "No,Tanggal,Invoice,Item,Total\n";
-  sales.forEach((s, i) => {
-    const dObj = parseStoredDate(s.date)
-    const d = dObj ? dObj.toISOString().slice(0,10) : ''
+  let counter = 1;
+  sales.forEach((s) => {
+    const d = getCsvDateFromRecord(s); // ambil tanggal yang aman
     const items = s.items.map(x => `${x.name} x${x.qty}`).join(" | ");
-    csv += `${i+1},${d},${s.invoice},"${items}",${s.total}\n`;
+    csv += `${counter},${d},${s.invoice},"${items}",${s.total}\n`;
+    counter++;
   });
 
   downloadCSV(csv, "laporan_penjualan.csv");
-}
-function printSales(){ window.print() }
-function exportRestock(){
-  if(restocks.length === 0) return alert("Tidak ada data restock");
-
-  let csv = "No,Tanggal,SKU,Nama,Jumlah,StokAkhir\n";
-  restocks.forEach((r, i) => {
-    const dObj = parseStoredDate(r.date)
-    const d = dObj ? dObj.toISOString().slice(0,10) : ''
-    csv += `${i+1},${d},${r.sku},${r.name},${r.qty},${r.stockAfter}\n`;
-  });
-
-  downloadCSV(csv, "laporan_restock.csv");
 }
 function printRestock(){ window.print() }
 
