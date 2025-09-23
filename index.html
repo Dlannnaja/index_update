@@ -634,6 +634,7 @@ function startGuide(){alert("Guide: 1. Tambah produk, 2. Restock, 3. Scan, 4. Ke
 function skipGuide(){document.getElementById("guideOverlay").style.display="none"}
 
 /* ---------- INIT ---------- */
+/* ---------- INIT ---------- */
 function init(){
   // ensure autoPrint is NOT checked on load (safety)
   const autoPrintEl = document.getElementById('autoPrint')
@@ -641,6 +642,21 @@ function init(){
 
   // load saved printer preference
   loadPrinterPreference()
+
+  // 🔄 migrasi data sales lama biar selalu ada dateDisplay
+  let updated = false
+  sales.forEach(s => {
+    if(s.date && !s.dateDisplay){
+      const dObj = parseStoredDate(s.date)
+      if(dObj){
+        s.dateDisplay = dObj.toLocaleString()
+        updated = true
+      }
+    }
+  })
+  if(updated){
+    localStorage.setItem("sales", JSON.stringify(sales))
+  }
 
   render(); renderFinalStock(); setInterval(renderFinalStock,5000)
   document.getElementById("guideOverlay").style.display="flex"
