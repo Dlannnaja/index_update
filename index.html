@@ -647,9 +647,27 @@ function init(){
   let updated = false
   sales.forEach(s => {
     if(s.date && !s.dateDisplay){
-      const dObj = parseStoredDate(s.date)
-      if(dObj){
+      let dObj = new Date(s.date)
+
+      // kalau hasilnya Invalid Date, coba parse manual format lama: DD-MM-YYYY HH:mm:ss
+      if(isNaN(dObj)){
+        const parts = s.date.split(" ")
+        if(parts.length === 2){
+          const [d,m,y] = parts[0].split("-")  // DD-MM-YYYY
+          const [hh,mm,ss] = parts[1].split(":")
+          if(d && m && y){
+            dObj = new Date(y, parseInt(m)-1, d, hh||0, mm||0, ss||0)
+          }
+        }
+      }
+
+      // kalau sukses diparse, buat dateDisplay
+      if(dObj && !isNaN(dObj)){
         s.dateDisplay = dObj.toLocaleString()
+        updated = true
+      } else {
+        // fallback kalau tetap gagal → pakai string aslinya
+        s.dateDisplay = s.date
         updated = true
       }
     }
