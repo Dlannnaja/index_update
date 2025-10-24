@@ -1195,7 +1195,7 @@ function startScan(target) { openCamera(target); }
     }
   }
 
-  function showStep(i) {
+  async function showStep(i) {
   const steps = window.guideSteps || [];
   if (!steps || steps.length === 0) return endGuide();
   if (i < 0) i = 0;
@@ -1203,22 +1203,62 @@ function startScan(target) { openCamera(target); }
 
   currentStep = i;
   const step = steps[i];
-  if (!step || !step.selector) return nextGuide();
+  if (!step || !step.selector) {
+    setTimeout(nextGuide, 60);
+    return;
+  }
 
   const el = document.querySelector(step.selector);
   if (!el) {
     console.warn("Guide: element not found:", step.selector);
-    return nextGuide();
+    setTimeout(nextGuide, 60);
+    return;
   }
 
   createGuideElements();
 
+  // Ensure element is visible in center of viewport (mobile browsers need more time)
+  await (async function ensureVisible(element, timeout = 900, tolerancePx = 36) {
+    try {
+      // Start smooth scroll to center
+      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    } catch (e) {
+      // fallback: instant scroll
+      try { element.scrollIntoView(true); } catch(e){}
+    }
+
+    const start = Date.now();
+    return await new Promise(resolve => {
+      const check = () => {
+        const r = element.getBoundingClientRect();
+        const elemCenterY = r.top + r.height / 2;
+        const viewportCenterY = window.innerHeight / 2;
+        const distance = Math.abs(elemCenterY - viewportCenterY);
+
+        // if element center is within tolerance, consider it centered
+        if (distance <= tolerancePx) return resolve(true);
+
+        // if we've passed timeout, resolve anyway (avoid infinite wait)
+        if (Date.now() - start > timeout) return resolve(false);
+
+        // otherwise check again on next rAF for smoother polling
+        requestAnimationFrame(check);
+      };
+      // small initial delay to allow browser to start smooth scroll
+      setTimeout(check, 40);
+    });
+  })(el);
+
+  // small delay to let layout settle (very short)
+  await new Promise(r => setTimeout(r, 40));
+
+  // Now compute position and render highlight + tooltip
   const rect = el.getBoundingClientRect();
   const padding = 8;
   highlightBox.style.top = rect.top + window.scrollY - padding + "px";
   highlightBox.style.left = rect.left + window.scrollX - padding + "px";
-  highlightBox.style.width = rect.width + padding * 2 + "px";
-  highlightBox.style.height = rect.height + padding * 2 + "px";
+  highlightBox.style.width = Math.max(80, rect.width + padding * 2) + "px";
+  highlightBox.style.height = Math.max(36, rect.height + padding * 2) + "px";
   highlightBox.style.display = "block";
 
   const isLast = i === steps.length - 1;
@@ -1231,42 +1271,101 @@ function startScan(target) { openCamera(target); }
     </div>
   `;
 
-  // --- posisi tooltip adaptif (auto menyesuaikan di atas/bawah/tengah) ---
-  const tooltipHeight = 130;
+  // adaptive placement logic (kept from your previous implementation)
+  const defaultTooltipWidth = 320;
+  const tooltipHeight = 140;
   const spaceBelow = window.innerHeight - rect.bottom;
   let tooltipTop;
+  let left = rect.left + window.scrollX;
+  let tooltipWidth = defaultTooltipWidth;
 
-  if (spaceBelow > tooltipHeight + 20) {
-    // cukup ruang di bawah elemen
-    tooltipTop = rect.bottom + window.scrollY + 12;
-  } else if (rect.top > tooltipHeight + 20) {
-    // cukup ruang di atas elemen
-    tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
+  if (step.selector === '#checkoutBtn') {
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const topCentered = rect.top + window.scrollY + (rect.height / 2) - (tooltipHeight / 2);
+
+    if (spaceRight > tooltipWidth + 20) {
+      tooltipTop = topCentered;
+      left = rect.right + window.scrollX + 12;
+    } else if (spaceLeft > tooltipWidth + 20) {
+      tooltipTop = topCentered;
+      left = rect.left + window.scrollX - tooltipWidth - 12;
+    } else {
+      if (spaceBelow > tooltipHeight + 20) {
+        tooltipTop = rect.bottom + window.scrollY + 12;
+      } else if (rect.top > tooltipHeight + 20) {
+        tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
+      } else {
+        tooltipTop = topCentered;
+      }
+      left = Math.min(Math.max(rect.left + window.scrollX - 40, 10), window.innerWidth + window.scrollX - (tooltipWidth + 40));
+    }
+  } else if (step.selector === '#btnStartScan') {
+    tooltipWidth = 260;
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const verticalCenter = rect.top + window.scrollY + (rect.height / 2);
+
+    if (spaceRight >= tooltipWidth + 12) {
+      tooltipTop = verticalCenter - (tooltipHeight / 2);
+      left = rect.right + window.scrollX + 10;
+    } else if (spaceLeft >= tooltipWidth + 12) {
+      tooltipTop = verticalCenter - (tooltipHeight / 2);
+      left = rect.left + window.scrollX - tooltipWidth - 10;
+    } else {
+      if (spaceBelow > tooltipHeight + 12) {
+        tooltipTop = rect.bottom + window.scrollY + 10;
+      } else if (rect.top > tooltipHeight + 12) {
+        tooltipTop = rect.top + window.scrollY - tooltipHeight - 10;
+      } else {
+        tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
+      }
+      left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+    }
+
+    const minLeft = window.scrollX + 8;
+    const maxLeft = window.scrollX + window.innerWidth - (tooltipWidth + 8);
+    left = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
+
+    const minTop = window.scrollY + 8;
+    const maxTop = window.scrollY + window.innerHeight - (tooltipHeight + 8);
+    tooltipTop = Math.min(Math.max(tooltipTop, minTop), Math.max(minTop, maxTop));
+
+    tooltip.style.maxWidth = tooltipWidth + "px";
   } else {
-    // fallback: di tengah layar kalau sempit
-    tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
+    tooltipWidth = defaultTooltipWidth;
+    tooltip.style.maxWidth = tooltipWidth + "px";
+
+    if (spaceBelow > tooltipHeight + 20) {
+      tooltipTop = rect.bottom + window.scrollY + 12;
+    } else if (rect.top > tooltipHeight + 20) {
+      tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
+    } else {
+      tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
+    }
+
+    if (left + tooltipWidth > window.innerWidth + window.scrollX - 10) {
+      left = window.innerWidth + window.scrollX - tooltipWidth - 10;
+    }
+    if (left < 10) left = 10;
   }
 
-  let left = rect.left + window.scrollX;
-  if (left + 340 > window.innerWidth + window.scrollX)
-    left = window.innerWidth + window.scrollX - 360;
-  if (left < 10) left = 10;
-
-  tooltip.style.top = tooltipTop + "px";
-  tooltip.style.left = left + "px";
+  tooltip.style.top = (tooltipTop || (window.scrollY + 20)) + "px";
+  tooltip.style.left = (left || 10) + "px";
   tooltip.style.display = "block";
   tooltip.style.opacity = 0;
-  tooltip.style.transition = "opacity 0.25s ease";
-  setTimeout(() => (tooltip.style.opacity = 1), 20);
+  tooltip.style.transition = "opacity 0.18s ease, transform 0.12s ease";
+  tooltip.style.transform = "translateY(6px)";
+  setTimeout(() => { tooltip.style.opacity = 1; tooltip.style.transform = "translateY(0)"; }, 20);
 
-  try {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  } catch (e) {}
-
-  document.getElementById("guideNextBtn").onclick = function (e) {
-    e.preventDefault();
-    nextGuide();
-  };
+  const nextBtn = document.getElementById("guideNextBtn");
+  if (nextBtn) {
+    nextBtn.onclick = function (e) {
+      e.preventDefault();
+      nextBtn.disabled = true;
+      setTimeout(() => nextGuide(), 80);
+    };
+  }
 }
 
   function nextGuide(){
