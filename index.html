@@ -105,7 +105,8 @@
   input[type="text"],
   input[type="number"],
   input[type="date"],
-  select {
+  select,
+  input[type="month"] {
     width: 100%;
     padding: var(--spacing-sm);
     border: 1px solid #dee2e6;
@@ -327,7 +328,6 @@
     vertical-align: middle;
   }
 
-
   #reader {
     width: 100%;
     max-width: 100%;
@@ -483,6 +483,142 @@
     background: var(--card);
     box-shadow: var(--shadow);
   }
+
+  /* camera alert inside camera modal */
+  .camera-alert {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    color: #111;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    max-width: 360px;
+    margin: 6px auto 0;
+    text-align: center;
+  }
+  .camera-alert .msg { margin-bottom: 12px; color: #b91c1c; font-weight:600; }
+
+  /* responsive additions appended below (mobile-first responsive rules) */
+  /* --- Responsive variables (mobile-first) --- */
+  :root{
+    --spacing-xs: 6px;
+    --spacing-sm-r: 8px;
+    --spacing-md-r: 12px;
+    --spacing-lg-r: 16px;
+    --spacing-xl: 20px;
+    --radius-r: 8px;
+    --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
+    --font-size-xxs: clamp(11px, 1.8vw, 12px);
+    --font-size-xs: clamp(12px, 2.2vw, 13px);
+    --font-size-sm-r: clamp(13px, 2.6vw, 14px);
+    --font-size-base-r: clamp(14px, 2.8vw, 16px);
+    --font-size-lg-r: clamp(16px, 3.2vw, 18px);
+    --font-size-xl-r: clamp(18px, 3.6vw, 22px);
+    --btn-padding-vertical: 8px;
+    --btn-padding-horizontal: 12px;
+    --guide-tooltip-width: 320px;
+    --guide-tooltip-pad: 12px;
+  }
+
+  html,body{
+    font-size: var(--font-size-base-r);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  h2 { font-size: var(--font-size-xl-r); margin: 12px 0; }
+  h3 { font-size: var(--font-size-lg-r); margin: 10px 0; }
+
+  .container{
+    padding: var(--spacing-md-r);
+  }
+
+  .card {
+    border-radius: var(--radius-r);
+    padding: var(--spacing-md-r);
+    box-shadow: var(--shadow-md);
+  }
+
+  button {
+    padding: var(--btn-padding-vertical) var(--btn-padding-horizontal);
+    font-size: var(--font-size-sm-r);
+    border-radius: calc(var(--radius-r) * 1);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  button.small { padding: 6px 10px; font-size: var(--font-size-xs); }
+
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-r); background: transparent; }
+
+  @media (min-width: 600px) {
+    :root{
+      --spacing-sm-r: 8px;
+      --spacing-md-r: 12px;
+      --spacing-lg-r: 16px;
+      --font-size-base-r: clamp(15px, 1.6vw, 16px);
+      --guide-tooltip-width: 320px;
+    }
+    .grid { grid-template-columns: 1fr 360px; }
+    button { width: auto; min-width: 120px; }
+    button.small { min-width: 88px; }
+    #cameraModal, #paymentModal { align-items: center; }
+  }
+
+  @media (min-width: 900px) {
+    :root{
+      --spacing-md-r: 14px;
+      --spacing-lg-r: 18px;
+      --font-size-base-r: 16px;
+      --font-size-lg-r: 18px;
+      --font-size-xl-r: 20px;
+      --guide-tooltip-width: 340px;
+    }
+    .grid { grid-template-columns: 1fr 360px; gap: 18px; }
+    body { font-size: var(--font-size-base-r); }
+    table { font-size: var(--font-size-base-r); min-width: 600px; }
+    button { font-size: var(--font-size-base-r); padding: 10px 14px; }
+    #checkoutBtn { width: 100%; }
+  }
+
+  @media (min-width: 1200px) {
+    :root{
+      --spacing-lg-r: 20px;
+      --font-size-base-r: 16px;
+      --font-size-lg-r: 20px;
+      --font-size-xl-r: 22px;
+      --guide-tooltip-width: 360px;
+    }
+    .grid{ grid-template-columns: 1fr 360px; gap: 22px; }
+    button { padding: 10px 16px; }
+    #salesTbl, #restockTbl, #finalStockTbl { min-width: 700px; }
+  }
+
+  /* guide tooltip styling (transition rules replaced/added below) */
+  #guideTooltip{
+    position: absolute;
+    z-index: 100001;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    border-radius: 8px;
+    background: #fff;
+    padding: var(--guide-tooltip-pad);
+    max-width: var(--guide-tooltip-width);
+    word-wrap: break-word;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 220ms cubic-bezier(.22,.9,.35,1), transform 220ms cubic-bezier(.22,.9,.35,1);
+  }
+
+  @media (max-width: 420px){
+    #guideTooltip{ max-width: calc(100vw - 24px); padding: 10px; font-size: var(--font-size-xs); }
+  }
+
+  #highlightBox { pointer-events: none; transition: top 260ms cubic-bezier(.22,.9,.35,1), left 260ms cubic-bezier(.22,.9,.35,1), width 260ms cubic-bezier(.22,.9,.35,1), height 260ms cubic-bezier(.22,.9,.35,1); will-change: top,left,width,height; }
+
+  /* Accessibility touch tweaks */
+  button, .tab-btn, .pm-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  @media print { #guideOverlay, #cameraModal, #paymentModal, #guideTooltip { display: none !important; } }
+
   </style>
 
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -533,14 +669,25 @@
 
         <div id="restock" class="tab-content">
           <h3>Laporan Restock (Barang Masuk)</h3>
-          <div class="flex">
+          <div class="flex" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
             <button onclick="loadRestock()" class="small">Tampilkan</button>
-            <button onclick="exportRestock()" class="small ghost">Export CSV</button>
+            <button onclick="exportRestock()" class="small ghost">Export CSV Semua</button>
             <button onclick="printRestock()" class="small ghost">Cetak</button>
+            <button onclick="clearRestocks()" class="small ghost">Clear Restock</button>
+          </div>
+
+          <!-- export per bulan / range -->
+          <div class="flex" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <label class="muted">Bulan: <input id="restockMonth" type="month" /></label>
+            <button class="small ghost" onclick="exportRestockByMonth()">Download Bulanan</button>
+
+            <label class="muted">Dari <input id="restockExportFrom" type="date" /></label>
+            <label class="muted">Sampai <input id="restockExportTo" type="date" /></label>
+            <button class="small ghost" onclick="exportRestockByRange()">Download Rentang</button>
           </div>
 
           <!-- table-wrapper ditambahkan di sini -->
-          <div class="table-wrapper" style="max-height:200px; margin-top: var(--spacing-sm)">
+          <div class="table-wrapper" style="max-height:240px; margin-top: var(--spacing-sm)">
             <table id="restockTbl">
               <thead><tr><th>No</th><th>Tanggal</th><th>SKU</th><th>Nama</th><th>Jumlah</th><th>Stok Akhir</th></tr></thead>
               <tbody></tbody>
@@ -608,7 +755,7 @@
           </form>
 
           <h3>Daftar Produk</h3>
-          <input id="search" placeholder="Cari produk (Kode/Nama)..." oninput="render()"
+          <input id="search" placeholder="Cari produk (Kode/Nama)..." oninput="render()" autocomplete="off"
                  style="margin-bottom: var(--spacing-lg); width: 100%; padding: var(--spacing-sm);
                         border-radius: var(--radius); border:1px solid #e8eef8" />
           <div class="table-wrapper" style="max-height: 300px;">
@@ -627,8 +774,17 @@
         <div class="flex" style="margin-top: var(--spacing-md); flex-direction: column; gap: var(--spacing-sm)">
           <div class="note">Total: <strong id="total">Rp 0</strong></div>
           <div style="width: 100%">
-            <!-- Fitur cetak otomatis & pengaturan printer DIHAPUS -->
-            <div class="info-small">Cetak struk sekarang diproses setelah penyelesaian penjualan melalui tombol Bayar / Selesaikan Penjualan.</div>
+            <label><input type="checkbox" id="autoPrint" /> Cetak struk otomatis</label>
+            <div class="printer-row">
+              <select id="printerSelect">
+                <option value="">Pilih printer (belum tersimpan)</option>
+                <option value="Printer Lokal">Printer Lokal</option>
+                <option value="Printer Bluetooth">Printer Bluetooth</option>
+                <option value="Printer Jaringan">Printer Jaringan</option>
+              </select>
+              <button class="small ghost" onclick="savePrinterPreference()">Simpan</button>
+            </div>
+            <div class="info-small">Jika auto print aktif: pastikan pilih & simpan printer. Jika tidak, proses cetak akan diblokir dan muncul peringatan.</div>
           </div>
           <div style="width: 100%; margin-top: var(--spacing-md)">
             <!-- tetap pakai id checkoutBtn supaya minimal perubahan -->
@@ -678,6 +834,15 @@
   ">
     <h3 style="margin-top:0;margin-bottom:10px">📷 Scan Barcode</h3>
     <div id="cameraReader" style="width:100%;background:#000;min-height:250px;border-radius:8px;overflow:hidden"></div>
+
+    <!-- camera alert area (hidden by default) -->
+    <div id="cameraAlert" class="camera-alert" style="display:none">
+      <div class="msg" id="cameraAlertMsg">Pesan</div>
+      <div>
+        <button class="ghost small" onclick="closeCameraAlert()">Close</button>
+      </div>
+    </div>
+
     <div style="display:flex;justify-content:end;margin-top:10px;gap:10px">
       <button class="ghost small" onclick="closeCamera()">Tutup</button>
     </div>
@@ -762,13 +927,15 @@ function parseStoredDate(dStr){
   return d;
 }
 
-/* ---------- render product list ---------- */
+/* ---------- render product list (dengan notif jika kosong) ---------- */
 function render(){
   const tbl=document.querySelector("#tbl tbody")
-  const search=document.querySelector("#search").value.toLowerCase()
+  const searchVal=document.querySelector("#search").value.toLowerCase().trim()
   tbl.innerHTML=""
+  let matched = 0
   products.forEach((p,i)=>{
-    if(p.name.toLowerCase().includes(search)||p.sku.includes(search)){
+    if(p.name.toLowerCase().includes(searchVal)||p.sku.includes(searchVal)){
+      matched++
       const tr=document.createElement("tr")
       tr.innerHTML=`
         <td>${p.sku}</td>
@@ -782,6 +949,12 @@ function render(){
       tbl.appendChild(tr)
     }
   })
+  if(matched === 0){
+    // tampilkan baris pemberitahuan (bukan alert)
+    const tr=document.createElement("tr")
+    tr.innerHTML = `<td colspan="5" class="muted" style="text-align:center;padding:14px">Tidak ada produk yang sesuai</td>`
+    tbl.appendChild(tr)
+  }
   updateRestockDropdown()
 }
 
@@ -866,12 +1039,14 @@ function restockProduct(){
   localStorage.setItem("restocks",JSON.stringify(restocks))
 
   render(); document.getElementById("restockQty").value=""
+  loadRestock()
 }
 
 /* ---------- CART & CHECKOUT (diubah alurnya) ---------- */
 function addToCart(sku){
   const p=products.find(x=>x.sku===sku)
   if(!p) return alert("Produk tidak ditemukan")
+  if(p.qty <= 0) return alert("Produk telah habis, isi stok dahulu")
   const cartItem=cart.find(c=>c.sku===sku)
   if(cartItem){
     if(cartItem.qty>=p.qty) return alert("Stok tidak cukup")
@@ -929,10 +1104,120 @@ function clearCart(){
   renderCart()
 }
 
-/* ---------- PRINTER PREFERENCE FEATURE REMOVED ----------
-   Fungsi & elemen terkait "Cetak otomatis", "Pilih printer", dan "Simpan"
-   telah dihapus sesuai permintaan pengguna.
-*/
+/* ---------- printer preference helpers ---------- */
+function loadPrinterPreference(){
+  const p = localStorage.getItem('preferredPrinter') || ''
+  const sel = document.getElementById('printerSelect')
+  if(sel) sel.value = p
+}
+function savePrinterPreference(){
+  const sel = document.getElementById('printerSelect')
+  if(!sel) return
+  localStorage.setItem('preferredPrinter', sel.value)
+  alert(sel.value ? 'Preferensi printer disimpan: ' + sel.value : 'Preferensi printer dikosongkan')
+}
+
+/* ---------- Restock export & clear ---------- */
+function loadRestock(){
+  const tbl=document.querySelector("#restockTbl tbody")
+  tbl.innerHTML=""
+
+  restocks.forEach((r,i)=>{
+    const dObj = parseStoredDate(r.date)
+    const dDisplay = dObj ? dObj.toLocaleDateString('id-ID') : 'Invalid Date'
+    tbl.innerHTML+=`
+      <tr>
+        <td>${i+1}</td>
+        <td>${dDisplay}</td>
+        <td>${r.sku}</td>
+        <td>${r.name}</td>
+        <td>${r.qty}</td>
+        <td>${r.stockAfter}</td>
+      </tr>`
+  })
+}
+
+function exportRestock(){
+  if(restocks.length === 0) return alert("Tidak ada data restock");
+  let csv = "No;Tanggal;SKU;Nama;Jumlah;StokAkhir\n";
+  restocks.forEach((r,i)=>{
+    const d = getCsvDateFromRecord(r);
+    csv += `${i+1};"${d}";"${r.sku}";"${r.name}";"${r.qty}";"${r.stockAfter}"\n`;
+  });
+  downloadCSV(csv, "laporan_restock_all.csv");
+}
+
+function exportRestockByMonth(){
+  const m = document.getElementById('restockMonth').value // "YYYY-MM"
+  if(!m) return alert("Pilih bulan terlebih dahulu")
+  const [yy,mm] = m.split('-').map(x=>parseInt(x,10))
+  const filtered = restocks.filter(r=>{
+    const d = parseStoredDate(r.date)
+    if(!d) return false
+    return d.getFullYear() === yy && (d.getMonth()+1) === mm
+  })
+  if(filtered.length===0) return alert("Tidak ada data restock untuk bulan ini")
+  let csv = "No;Tanggal;SKU;Nama;Jumlah;StokAkhir\n";
+  filtered.forEach((r,i)=>{
+    const d = getCsvDateFromRecord(r);
+    csv += `${i+1};"${d}";"${r.sku}";"${r.name}";"${r.qty}";"${r.stockAfter}"\n`;
+  });
+  downloadCSV(csv, `laporan_restock_${m}.csv`);
+}
+
+function exportRestockByRange(){
+  const from = document.getElementById('restockExportFrom').value
+  const to = document.getElementById('restockExportTo').value
+  if(!from || !to) return alert("Pilih tanggal dari & sampai terlebih dahulu")
+  const fromD = new Date(from)
+  const toD = new Date(to)
+  toD.setHours(23,59,59,999)
+  const filtered = restocks.filter(r=>{
+    const d = parseStoredDate(r.date)
+    if(!d) return false
+    return d >= fromD && d <= toD
+  })
+  if(filtered.length===0) return alert("Tidak ada data restock untuk rentang tanggal ini")
+  let csv = "No;Tanggal;SKU;Nama;Jumlah;StokAkhir\n";
+  filtered.forEach((r,i)=>{
+    const d = getCsvDateFromRecord(r);
+    csv += `${i+1};"${d}";"${r.sku}";"${r.name}";"${r.qty}";"${r.stockAfter}"\n`;
+  });
+  const fn = `laporan_restock_${from.replace(/-/g,'')}_${to.replace(/-/g,'')}.csv`;
+  downloadCSV(csv, fn);
+}
+
+function clearRestocks(){
+  if(!confirm("Hapus semua data restock?")) return;
+  restocks = [];
+  localStorage.setItem('restocks', JSON.stringify(restocks));
+  loadRestock();
+  alert("Laporan restock berhasil dihapus.");
+}
+
+/* ---------- CSV helper ---------- */
+function getCsvDateFromRecord(rec){
+  let dObj = null;
+
+  if(rec && rec.date){
+    dObj = parseStoredDate(rec.date);
+  }
+  if((!dObj || isNaN(dObj)) && rec && rec.dateDisplay){
+    dObj = parseStoredDate(rec.dateDisplay);
+  }
+
+  if(dObj && !isNaN(dObj)){
+    const yyyy = dObj.getFullYear();
+    const mm = String(dObj.getMonth()+1).padStart(2,"0");
+    const dd = String(dObj.getDate()).padStart(2,"0");
+    const hh = String(dObj.getHours()).padStart(2,"0");
+    const mi = String(dObj.getMinutes()).padStart(2,"0");
+    const ss = String(dObj.getSeconds()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+  }
+
+  return rec.dateDisplay || "";
+}
 
 /* ---------- NEW: PAYMENT FLOW ---------- */
 
@@ -1050,7 +1335,23 @@ function finishSale(invoice){
   localStorage.setItem('products', JSON.stringify(products))
   localStorage.setItem('sales', JSON.stringify(sales))
 
-  // Tawarkan cetak struk setelah finalisasi (printer selection removed)
+  // auto-print jika diinginkan
+  const auto = document.getElementById("autoPrint").checked
+  const preferred = localStorage.getItem('preferredPrinter') || ''
+  if(auto){
+    if(!preferred){
+      alert("Cetak otomatis aktif tetapi tidak ada printer yang dipilih. Silahkan pilih & simpan printer terlebih dahulu.")
+    } else {
+      try{
+        printReceipt(tx)
+      } catch(e) {
+        console.error(e)
+        alert("Gagal mencetak secara otomatis. Pastikan printer terhubung.")
+      }
+    }
+  }
+
+  // jika autoPrint non aktif, tetap tawarkan cetak
   const doPrint = confirm("Penjualan selesai. Mau cetak struk sekarang?")
   if(doPrint) printReceipt(tx)
 
@@ -1096,7 +1397,7 @@ function printReceipt(t){
   }
 }
   
-/* ---------- SCAN (tidak diubah) ---------- */
+/* ---------- SCAN (dengan handling stok 0 & not found) ---------- */
 let html5QrcodeScanner = null;
 let scanTarget = null;
 
@@ -1106,14 +1407,19 @@ function openCamera(target) {
   camModal.style.display = 'flex';
   camModal.style.pointerEvents = 'auto';
   camModal.style.zIndex = '9000';
+  hideCameraAlert()
 
   if (html5QrcodeScanner) return;
   html5QrcodeScanner = new Html5Qrcode("cameraReader");
   const config = { fps: 10, qrbox: 250 };
 
   html5QrcodeScanner.start({ facingMode: "environment" }, config, msg => {
+    // setiap hasil scan akan melalui handleScan
     handleScan(msg);
-    if (document.getElementById("scanMode")?.value === "single") stopCamera();
+    if (document.getElementById("scanMode")?.value === "single") {
+      // jika single, kita stop setelah satu hasil (selesai setelah handleScan)
+      // stopCamera() di-handle di dalam handleScan ketika berhasil/invalid
+    }
   }).catch(err => {
     console.error(err);
     alert("Gagal mengakses kamera: " + err);
@@ -1132,23 +1438,58 @@ function stopCamera() {
     camModal.style.display = "none";
     camModal.style.pointerEvents = "none";
   }
+  hideCameraAlert()
 }
 
 function closeCamera() { stopCamera(); }
 
+function showCameraAlert(message){
+  // stop scanner first
+  try{ if(html5QrcodeScanner) { html5QrcodeScanner.stop().catch(()=>{}); html5QrcodeScanner=null; } }catch(e){}
+  const alertEl = document.getElementById('cameraAlert')
+  const msgEl = document.getElementById('cameraAlertMsg')
+  if(msgEl) msgEl.textContent = message
+  if(alertEl) alertEl.style.display = 'block'
+}
+
+function hideCameraAlert(){
+  const alertEl = document.getElementById('cameraAlert')
+  if(alertEl) alertEl.style.display = 'none'
+}
+
+function closeCameraAlert(){
+  hideCameraAlert()
+  // close entire camera modal after acknowledging
+  closeCamera()
+}
+
 function handleScan(msg) {
-  if (scanTarget === "sell" || document.getElementById("autoSell")?.checked) {
-    addToCart(msg);
-  } else {
-    document.getElementById("sku").value = msg;
-    alert("Kode Barang terdeteksi: " + msg);
+  // msg biasanya sku string
+  const sku = String(msg).trim()
+  const p = products.find(x=>x.sku===sku)
+  if(!p){
+    // produk tidak ditemukan => stop scanner & tampilkan pesan
+    showCameraAlert("Produk tidak ditemukan di daftar. Tambahkan produk terlebih dahulu.")
+    return
+  }
+  if(p.qty <= 0){
+    // jika stok 0 -> hentikan scanner dan tampilkan pesan, kamera tidak melanjutkan memasukkan ke cart
+    showCameraAlert("Produk telah habis, isi stok dahulu")
+    return
+  }
+
+  // jika produk ada & stok > 0 -> lanjutkan ke keranjang
+  addToCart(sku)
+  // jika mode single, stop camera setelah berhasil menambahkan
+  if(document.getElementById("scanMode")?.value === "single"){
+    stopCamera()
   }
 }
 
 function scanSku() { openCamera("sku"); }
 function startScan(target) { openCamera(target); }
 
-/* === GUIDE INTERAKTIF: robust replacement === */
+/* === GUIDE INTERAKTIF (IIFE) with improved showStep placement and responsive handling === */
 
 (function(){
   // safe globals for guide
@@ -1164,9 +1505,10 @@ function startScan(target) { openCamera(target); }
   let currentStep = 0;
   let highlightBox = null;
   let tooltip = null;
+  let resizeHandler = null;
+  window.guideActive = false;
 
   function createGuideElements(){
-    // jika sudah dibuat, pakai yang ada
     if(!highlightBox){
       highlightBox = document.createElement("div");
       highlightBox.id = "highlightBox";
@@ -1176,7 +1518,7 @@ function startScan(target) { openCamera(target); }
       highlightBox.style.background = "rgba(11, 116, 218, 0.12)";
       highlightBox.style.zIndex = "100000";
       highlightBox.style.pointerEvents = "none";
-      highlightBox.style.transition = "all 0.25s ease";
+      highlightBox.style.transition = "top 260ms cubic-bezier(.22,.9,.35,1), left 260ms cubic-bezier(.22,.9,.35,1), width 260ms cubic-bezier(.22,.9,.35,1), height 260ms cubic-bezier(.22,.9,.35,1)";
       document.body.appendChild(highlightBox);
     }
 
@@ -1191,182 +1533,247 @@ function startScan(target) { openCamera(target); }
       tooltip.style.maxWidth = "320px";
       tooltip.style.zIndex = "100001";
       tooltip.style.fontSize = "13px";
+      tooltip.style.pointerEvents = "auto";
+      tooltip.style.opacity = 0;
+      tooltip.style.transform = "translateY(6px)";
+      tooltip.style.transition = "opacity 220ms cubic-bezier(.22,.9,.35,1), transform 220ms cubic-bezier(.22,.9,.35,1)";
       document.body.appendChild(tooltip);
     }
+
+    if(!resizeHandler){
+      resizeHandler = () => {
+        if(window.guideActive){
+          setTimeout(()=> {
+            if(window.guideActive) showStep(currentStep)
+          }, 80)
+        }
+      };
+      window.addEventListener('resize', resizeHandler)
+    }
   }
 
+  // smoother showStep implemented above - reuse the function definition
   async function showStep(i) {
-  const steps = window.guideSteps || [];
-  if (!steps || steps.length === 0) return endGuide();
-  if (i < 0) i = 0;
-  if (i >= steps.length) return endGuide();
+    const steps = window.guideSteps || [];
+    if (!steps || steps.length === 0) return endGuide();
+    if (i < 0) i = 0;
+    if (i >= steps.length) return endGuide();
 
-  currentStep = i;
-  const step = steps[i];
-  if (!step || !step.selector) {
-    setTimeout(nextGuide, 60);
-    return;
-  }
-
-  const el = document.querySelector(step.selector);
-  if (!el) {
-    console.warn("Guide: element not found:", step.selector);
-    setTimeout(nextGuide, 60);
-    return;
-  }
-
-  createGuideElements();
-
-  // Ensure element is visible in center of viewport (mobile browsers need more time)
-  await (async function ensureVisible(element, timeout = 900, tolerancePx = 36) {
-    try {
-      // Start smooth scroll to center
-      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    } catch (e) {
-      // fallback: instant scroll
-      try { element.scrollIntoView(true); } catch(e){}
+    currentStep = i;
+    const step = steps[i];
+    if (!step || !step.selector) {
+      setTimeout(nextGuide, 60);
+      return;
     }
 
-    const start = Date.now();
-    return await new Promise(resolve => {
-      const check = () => {
-        const r = element.getBoundingClientRect();
-        const elemCenterY = r.top + r.height / 2;
-        const viewportCenterY = window.innerHeight / 2;
-        const distance = Math.abs(elemCenterY - viewportCenterY);
+    const el = document.querySelector(step.selector);
+    if (!el) {
+      console.warn("Guide: element not found:", step.selector);
+      setTimeout(nextGuide, 60);
+      return;
+    }
 
-        // if element center is within tolerance, consider it centered
-        if (distance <= tolerancePx) return resolve(true);
+    createGuideElements();
 
-        // if we've passed timeout, resolve anyway (avoid infinite wait)
-        if (Date.now() - start > timeout) return resolve(false);
+    // Helper: wait for scroll to settle by observing scroll events and element bounding changes
+    function waitForElementCentered(element, timeout = 900, settleMs = 110, tolerancePx = 36) {
+      return new Promise((resolve) => {
+        let lastChange = Date.now();
+        const start = Date.now();
 
-        // otherwise check again on next rAF for smoother polling
-        requestAnimationFrame(check);
-      };
-      // small initial delay to allow browser to start smooth scroll
-      setTimeout(check, 40);
-    });
-  })(el);
+        // track last bounding rect center
+        let lastCenter = null;
 
-  // small delay to let layout settle (very short)
-  await new Promise(r => setTimeout(r, 40));
+        const checkCenter = () => {
+          const r = element.getBoundingClientRect();
+          const elemCenterY = r.top + r.height / 2;
+          const viewportCenterY = window.innerHeight / 2;
+          const distance = Math.abs(elemCenterY - viewportCenterY);
 
-  // Now compute position and render highlight + tooltip
-  const rect = el.getBoundingClientRect();
-  const padding = 8;
-  highlightBox.style.top = rect.top + window.scrollY - padding + "px";
-  highlightBox.style.left = rect.left + window.scrollX - padding + "px";
-  highlightBox.style.width = Math.max(80, rect.width + padding * 2) + "px";
-  highlightBox.style.height = Math.max(36, rect.height + padding * 2) + "px";
-  highlightBox.style.display = "block";
+          // if center within tolerance, and no further movement for settleMs, consider centered
+          if (distance <= tolerancePx) {
+            // if lastCenter null -> set it and wait settleMs
+            if (lastCenter === null) {
+              lastCenter = elemCenterY;
+              lastChange = Date.now();
+            } else {
+              // if center not changed significantly for settleMs -> done
+              if (Math.abs(lastCenter - elemCenterY) < 2 && (Date.now() - lastChange) > settleMs) {
+                resolve(true);
+                return;
+              } else {
+                lastCenter = elemCenterY;
+                lastChange = Date.now();
+              }
+            }
+          } else {
+            // not yet centered -> update lastCenter and continue
+            lastCenter = elemCenterY;
+            lastChange = Date.now();
+          }
 
-  const isLast = i === steps.length - 1;
-  tooltip.innerHTML = `
-    <div style="margin-bottom:8px">${step.text || ""}</div>
-    <div style="text-align:right">
-      <button id="guideNextBtn" style="background:#0b74da;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">
-        ${isLast ? "Selesai" : "Lanjut ➜"}
-      </button>
-    </div>
-  `;
+          // timeout fallback
+          if (Date.now() - start > timeout) {
+            resolve(false);
+            return;
+          }
 
-  // adaptive placement logic (kept from your previous implementation)
-  const defaultTooltipWidth = 320;
-  const tooltipHeight = 140;
-  const spaceBelow = window.innerHeight - rect.bottom;
-  let tooltipTop;
-  let left = rect.left + window.scrollX;
-  let tooltipWidth = defaultTooltipWidth;
+          requestAnimationFrame(checkCenter);
+        };
 
-  if (step.selector === '#checkoutBtn') {
-    const spaceRight = window.innerWidth - rect.right;
-    const spaceLeft = rect.left;
-    const topCentered = rect.top + window.scrollY + (rect.height / 2) - (tooltipHeight / 2);
+        // start small delay to let smooth scroll begin
+        setTimeout(() => {
+          requestAnimationFrame(checkCenter);
+        }, 30);
+      });
+    }
 
-    if (spaceRight > tooltipWidth + 20) {
-      tooltipTop = topCentered;
-      left = rect.right + window.scrollX + 12;
-    } else if (spaceLeft > tooltipWidth + 20) {
-      tooltipTop = topCentered;
-      left = rect.left + window.scrollX - tooltipWidth - 12;
+    // Start smooth scroll (best-effort)
+    try {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    } catch (e) {
+      try { el.scrollIntoView(true); } catch (e) {}
+    }
+
+    // Wait until element is reasonably centered / scroll settled (improves on Android Chrome)
+    await waitForElementCentered(el, 1200, 120, 40);
+
+    // micro-delay to let browser paint/layout
+    await new Promise(r => setTimeout(r, 28));
+
+    // compute new rect AFTER scroll settled
+    const rect = el.getBoundingClientRect();
+    const padding = 8;
+    const targetTop = rect.top + window.scrollY - padding;
+    const targetLeft = rect.left + window.scrollX - padding;
+    const targetWidth = Math.max(80, rect.width + padding * 2) + "px";
+    const targetHeight = Math.max(36, rect.height + padding * 2) + "px";
+
+    // Ensure highlightBox visible and animate to its new position/size via CSS transitions
+    highlightBox.style.display = "block";
+    highlightBox.style.width = targetWidth;
+    highlightBox.style.height = targetHeight;
+    highlightBox.style.top = targetTop + "px";
+    highlightBox.style.left = targetLeft + "px";
+
+    // Prepare tooltip: fade-out current tooltip smoothly (if visible), reposition, then fade-in
+    tooltip.style.transition = "opacity 140ms cubic-bezier(.22,.9,.35,1), transform 180ms cubic-bezier(.22,.9,.35,1)";
+    tooltip.style.opacity = 0;
+    tooltip.style.transform = "translateY(6px)";
+
+    // wait a small amount to allow fade-out
+    await new Promise(r => setTimeout(r, 130));
+
+    const isLast = i === steps.length - 1;
+    tooltip.innerHTML = `
+      <div style="margin-bottom:8px">${step.text || ""}</div>
+      <div style="text-align:right">
+        <button id="guideNextBtn" style="background:#0b74da;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">
+          ${isLast ? "Selesai" : "Lanjut ➜"}
+        </button>
+      </div>
+    `;
+
+    // Adaptive placement logic (kept, but applied after scroll settled)
+    const defaultTooltipWidth = 320;
+    const tooltipHeight = 140;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    let tooltipTop;
+    let left = rect.left + window.scrollX;
+    let tooltipWidth = defaultTooltipWidth;
+
+    if (step.selector === '#checkoutBtn') {
+      const spaceRight = window.innerWidth - rect.right;
+      const spaceLeft = rect.left;
+      const topCentered = rect.top + window.scrollY + (rect.height / 2) - (tooltipHeight / 2);
+
+      if (spaceRight > tooltipWidth + 20) {
+        tooltipTop = topCentered;
+        left = rect.right + window.scrollX + 12;
+      } else if (spaceLeft > tooltipWidth + 20) {
+        tooltipTop = topCentered;
+        left = rect.left + window.scrollX - tooltipWidth - 12;
+      } else {
+        if (spaceBelow > tooltipHeight + 20) {
+          tooltipTop = rect.bottom + window.scrollY + 12;
+        } else if (rect.top > tooltipHeight + 20) {
+          tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
+        } else {
+          tooltipTop = topCentered;
+        }
+        left = Math.min(Math.max(rect.left + window.scrollX - 40, 10), window.innerWidth + window.scrollX - (tooltipWidth + 40));
+      }
+    } else if (step.selector === '#btnStartScan') {
+      tooltipWidth = 260;
+      const spaceRight = window.innerWidth - rect.right;
+      const spaceLeft = rect.left;
+      const verticalCenter = rect.top + window.scrollY + (rect.height / 2);
+
+      if (spaceRight >= tooltipWidth + 12) {
+        tooltipTop = verticalCenter - (tooltipHeight / 2);
+        left = rect.right + window.scrollX + 10;
+      } else if (spaceLeft >= tooltipWidth + 12) {
+        tooltipTop = verticalCenter - (tooltipHeight / 2);
+        left = rect.left + window.scrollX - tooltipWidth - 10;
+      } else {
+        if (spaceBelow > tooltipHeight + 12) {
+          tooltipTop = rect.bottom + window.scrollY + 10;
+        } else if (rect.top > tooltipHeight + 12) {
+          tooltipTop = rect.top + window.scrollY - tooltipHeight - 10;
+        } else {
+          tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
+        }
+        left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+      }
+
+      const minLeft = window.scrollX + 8;
+      const maxLeft = window.scrollX + window.innerWidth - (tooltipWidth + 8);
+      left = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
+
+      const minTop = window.scrollY + 8;
+      const maxTop = window.scrollY + window.innerHeight - (tooltipHeight + 8);
+      tooltipTop = Math.min(Math.max(tooltipTop, minTop), Math.max(minTop, maxTop));
+
+      tooltip.style.maxWidth = tooltipWidth + "px";
     } else {
+      tooltipWidth = defaultTooltipWidth;
+      tooltip.style.maxWidth = tooltipWidth + "px";
+
       if (spaceBelow > tooltipHeight + 20) {
         tooltipTop = rect.bottom + window.scrollY + 12;
       } else if (rect.top > tooltipHeight + 20) {
         tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
       } else {
-        tooltipTop = topCentered;
-      }
-      left = Math.min(Math.max(rect.left + window.scrollX - 40, 10), window.innerWidth + window.scrollX - (tooltipWidth + 40));
-    }
-  } else if (step.selector === '#btnStartScan') {
-    tooltipWidth = 260;
-    const spaceRight = window.innerWidth - rect.right;
-    const spaceLeft = rect.left;
-    const verticalCenter = rect.top + window.scrollY + (rect.height / 2);
-
-    if (spaceRight >= tooltipWidth + 12) {
-      tooltipTop = verticalCenter - (tooltipHeight / 2);
-      left = rect.right + window.scrollX + 10;
-    } else if (spaceLeft >= tooltipWidth + 12) {
-      tooltipTop = verticalCenter - (tooltipHeight / 2);
-      left = rect.left + window.scrollX - tooltipWidth - 10;
-    } else {
-      if (spaceBelow > tooltipHeight + 12) {
-        tooltipTop = rect.bottom + window.scrollY + 10;
-      } else if (rect.top > tooltipHeight + 12) {
-        tooltipTop = rect.top + window.scrollY - tooltipHeight - 10;
-      } else {
         tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
       }
-      left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+
+      if (left + tooltipWidth > window.innerWidth + window.scrollX - 10) {
+        left = window.innerWidth + window.scrollX - tooltipWidth - 10;
+      }
+      if (left < 10) left = 10;
     }
 
-    const minLeft = window.scrollX + 8;
-    const maxLeft = window.scrollX + window.innerWidth - (tooltipWidth + 8);
-    left = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
+    // Apply tooltip position and then fade/slide in
+    tooltip.style.left = (left || 10) + "px";
+    tooltip.style.top = (tooltipTop || (window.scrollY + 20)) + "px";
+    tooltip.style.display = "block";
 
-    const minTop = window.scrollY + 8;
-    const maxTop = window.scrollY + window.innerHeight - (tooltipHeight + 8);
-    tooltipTop = Math.min(Math.max(tooltipTop, minTop), Math.max(minTop, maxTop));
+    // Use rAF to ensure the browser registers the position change, then animate opacity/transform
+    requestAnimationFrame(() => {
+      tooltip.style.opacity = 1;
+      tooltip.style.transform = "translateY(0)";
+    });
 
-    tooltip.style.maxWidth = tooltipWidth + "px";
-  } else {
-    tooltipWidth = defaultTooltipWidth;
-    tooltip.style.maxWidth = tooltipWidth + "px";
-
-    if (spaceBelow > tooltipHeight + 20) {
-      tooltipTop = rect.bottom + window.scrollY + 12;
-    } else if (rect.top > tooltipHeight + 20) {
-      tooltipTop = rect.top + window.scrollY - tooltipHeight - 12;
-    } else {
-      tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
+    // attach next button handler
+    const nextBtn = document.getElementById("guideNextBtn");
+    if (nextBtn) {
+      nextBtn.onclick = function (e) {
+        e.preventDefault();
+        nextBtn.disabled = true;
+        setTimeout(() => nextGuide(), 80);
+      };
     }
-
-    if (left + tooltipWidth > window.innerWidth + window.scrollX - 10) {
-      left = window.innerWidth + window.scrollX - tooltipWidth - 10;
-    }
-    if (left < 10) left = 10;
   }
-
-  tooltip.style.top = (tooltipTop || (window.scrollY + 20)) + "px";
-  tooltip.style.left = (left || 10) + "px";
-  tooltip.style.display = "block";
-  tooltip.style.opacity = 0;
-  tooltip.style.transition = "opacity 0.18s ease, transform 0.12s ease";
-  tooltip.style.transform = "translateY(6px)";
-  setTimeout(() => { tooltip.style.opacity = 1; tooltip.style.transform = "translateY(0)"; }, 20);
-
-  const nextBtn = document.getElementById("guideNextBtn");
-  if (nextBtn) {
-    nextBtn.onclick = function (e) {
-      e.preventDefault();
-      nextBtn.disabled = true;
-      setTimeout(() => nextGuide(), 80);
-    };
-  }
-}
 
   function nextGuide(){
     currentStep++;
@@ -1378,8 +1785,13 @@ function startScan(target) { openCamera(target); }
   }
 
   function endGuide(){
+    window.guideActive = false;
     if(highlightBox){ highlightBox.remove(); highlightBox = null; }
     if(tooltip){ tooltip.remove(); tooltip = null; }
+    if(resizeHandler){
+      try{ window.removeEventListener('resize', resizeHandler) }catch(e){}
+      resizeHandler = null;
+    }
     const overlay = document.getElementById("guideOverlay");
     if(overlay) overlay.style.display = "none";
     currentStep = 0;
@@ -1390,14 +1802,16 @@ function startScan(target) { openCamera(target); }
     const overlay = document.getElementById("guideOverlay");
     if(overlay) overlay.style.display = "none";
     currentStep = 0;
+    window.guideActive = true;
     createGuideElements();
     showStep(0);
   }
 
   function skipGuide(){
+    window.guideActive = false;
     const overlay = document.getElementById("guideOverlay");
     if(overlay) overlay.style.display = "none";
-    endGuide();
+    if(typeof endGuide === "function") endGuide();
   }
 
   window.createGuideElements = createGuideElements;
@@ -1410,7 +1824,7 @@ function startScan(target) { openCamera(target); }
 </script>
 
 <script>
-/* ---------- INIT FIX & REPORTS (kebanyakan tidak diubah) ---------- */
+/* ---------- INIT & REPORTS ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   const guide = document.getElementById("guideOverlay");
   const cam = document.getElementById("cameraModal");
@@ -1426,13 +1840,11 @@ document.addEventListener("DOMContentLoaded", () => {
     cam.style.zIndex = "9000";
   }
 
-  // pastikan tombol overlay aktif
   document.querySelectorAll("#guideBox button").forEach(btn => {
     btn.style.pointerEvents = "auto";
     btn.style.cursor = "pointer";
   });
 });
-
 
 /* ---------- TABS ---------- */
 function openTab(id){
@@ -1472,49 +1884,7 @@ function loadSales(){
   })
 }
 
-function loadRestock(){
-  const tbl=document.querySelector("#restockTbl tbody")
-  tbl.innerHTML=""
-
-  restocks.forEach((r,i)=>{
-    const dObj = parseStoredDate(r.date)
-    const dDisplay = dObj ? dObj.toLocaleDateString('id-ID') : 'Invalid Date'
-    tbl.innerHTML+=`
-      <tr>
-        <td>${i+1}</td>
-        <td>${dDisplay}</td>
-        <td>${r.sku}</td>
-        <td>${r.name}</td>
-        <td>${r.qty}</td>
-        <td>${r.stockAfter}</td>
-      </tr>`
-  })
-}
-
 /* ---------- CSV export (safely parse date) ---------- */
-function getCsvDateFromRecord(rec){
-  let dObj = null;
-
-  if(rec && rec.date){
-    dObj = parseStoredDate(rec.date);
-  }
-  if((!dObj || isNaN(dObj)) && rec && rec.dateDisplay){
-    dObj = parseStoredDate(rec.dateDisplay);
-  }
-
-  if(dObj && !isNaN(dObj)){
-    const yyyy = dObj.getFullYear();
-    const mm = String(dObj.getMonth()+1).padStart(2,"0");
-    const dd = String(dObj.getDate()).padStart(2,"0");
-    const hh = String(dObj.getHours()).padStart(2,"0");
-    const mi = String(dObj.getMinutes()).padStart(2,"0");
-    const ss = String(dObj.getSeconds()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-  }
-
-  return rec.dateDisplay || "";
-}
-
 function exportSales(){
   if(sales.length === 0) return alert("Tidak ada data penjualan");
 
@@ -1560,21 +1930,15 @@ function renderFinalStock(){
   })
 }
 
-/* ---------- GUIDE (interaktif) ---------- */
-function startGuide() {
-  document.getElementById("guideOverlay").style.display = "none";
-  currentStep = 0;
-  createGuideElements();
-  showStep(currentStep);
-}
-function skipGuide(){document.getElementById("guideOverlay").style.display="none"}
-
 /* ---------- INIT ---------- */
 function init(){
-  // restore pendingPaidInvoice from localStorage (jika ada)
+  const autoPrintEl = document.getElementById('autoPrint')
+  if(autoPrintEl) autoPrintEl.checked = false
+
+  loadPrinterPreference()
+
   pendingPaidInvoice = localStorage.getItem('pendingPaidInvoice') || pendingPaidInvoice
 
-  // migrasi dateDisplay seperti sebelumnya
   let updated = false
   sales.forEach(s => {
     if(s.date && !s.dateDisplay){
@@ -1582,7 +1946,7 @@ function init(){
       if(isNaN(dObj)){
         const parts = s.date.split(" ")
         if(parts.length === 2){
-          const [d,m,y] = parts[0].split("-")  // DD-MM-YYYY
+          const [d,m,y] = parts[0].split("-")
           const [hh,mm,ss] = parts[1].split(":")
           if(d && m && y){
             dObj = new Date(y, parseInt(m)-1, d, hh||0, mm||0, ss||0)
@@ -1600,8 +1964,9 @@ function init(){
   })
   if(updated) localStorage.setItem("sales", JSON.stringify(sales))
 
-  render(); renderFinalStock(); setInterval(renderFinalStock,5000)
-  document.getElementById("guideOverlay").style.display="flex"
+  render(); renderFinalStock(); loadRestock(); setInterval(renderFinalStock,5000)
+  const guideOv = document.getElementById("guideOverlay");
+  if(guideOv) guideOv.style.display = "flex";
 }
 
 init()
