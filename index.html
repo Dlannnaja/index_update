@@ -497,8 +497,31 @@
   }
   .camera-alert .msg { margin-bottom: 12px; color: #b91c1c; font-weight:600; }
 
+  /* receipt preview modal */
+  #receiptPreviewModal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 12000;
+    background: rgba(0,0,0,0.45);
+  }
+  #receiptPreviewModal .box {
+    background:#fff;
+    border-radius:10px;
+    padding:16px;
+    max-width:420px;
+    width:92%;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+  }
+  #receiptPreviewModal .items { max-height:300px; overflow:auto; margin-bottom:10px; }
+
+  /* simple toast for feedback */
+  #appToast { position: fixed; right: 16px; bottom: 24px; max-width: calc(100% - 40px); background: linear-gradient(90deg,#0b74da,#094fa1); color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(11,116,218,0.18); font-weight:600; z-index:13000; opacity:0; transform:translateY(12px); transition: opacity 260ms ease, transform 260ms cubic-bezier(.22,.9,.35,1); pointer-events:auto; }
+  #appToast.show { opacity:1; transform:translateY(0); }
+
   /* responsive additions appended below (mobile-first responsive rules) */
-  /* --- Responsive variables (mobile-first) --- */
   :root{
     --spacing-xs: 6px;
     --spacing-sm-r: 8px;
@@ -618,6 +641,62 @@
   /* Accessibility touch tweaks */
   button, .tab-btn, .pm-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   @media print { #guideOverlay, #cameraModal, #paymentModal, #guideTooltip { display: none !important; } }
+    
+  /* === Floating Button Panduan (Responsive Compact) === */
+  #startGuideBtn {
+    position: fixed;
+    bottom: 18px;
+    left: 18px;
+    background: linear-gradient(135deg, #0b74da, #094fa1);
+    color: #fff;
+    border: none;
+    border-radius: 40px;
+    padding: 9px 15px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    z-index: 99999;
+    opacity: 0.9;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+  }
+  #startGuideBtn:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  
+  /* 📱 HP kecil (lebar ≤600px) */
+  @media (max-width: 600px) {
+    #startGuideBtn {
+      font-size: 11.5px;
+      padding: 7px 12px;
+      bottom: 12px;
+      left: 12px;
+      border-radius: 30px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+  }
+  
+  /* 💊 Tablet (600–900px) */
+  @media (min-width: 601px) and (max-width: 900px) {
+    #startGuideBtn {
+      font-size: 12.5px;
+      padding: 8px 14px;
+      bottom: 14px;
+      left: 14px;
+    }
+  }
+  
+  /* 💻 Laptop/Desktop (≥901px) */
+  @media (min-width: 901px) {
+    #startGuideBtn {
+      font-size: 14px;
+      padding: 10px 18px;
+      bottom: 22px;
+      left: 22px;
+    }
+  }
 
   </style>
 
@@ -848,7 +927,8 @@
     </div>
   </div>
 </div>
-
+<!-- Guide popup lama di-nonaktifkan -->
+<!--
   <div id="guideOverlay">
     <div id="guideBox">
       <h3>Selamat Datang di POS Toko Sembako</h3>
@@ -857,6 +937,29 @@
       <button onclick="skipGuide()">Skip</button>
     </div>
   </div>
+  -->
+  <!-- Tombol Floating "Mulai Panduan" -->
+<button id="startGuideBtn" onclick="startGuide()" title="Mulai Panduan"
+  style="
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: #0b74da;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    cursor: pointer;
+    z-index: 99999;
+    opacity: 0.9;
+  "
+  onmouseover="this.style.opacity=1"
+  onmouseout="this.style.opacity=0.9"
+>📘 Mulai Panduan</button>
+
 
   <!-- payment modal -->
   <div id="paymentModal">
@@ -882,10 +985,26 @@
     </div>
   </div>
 
+  <!-- receipt preview modal (shown after confirmPayment) -->
+  <div id="receiptPreviewModal">
+    <div class="box">
+      <h3 style="margin:0 0 8px 0">Struk Pembayaran</h3>
+      <div id="receiptPreviewContent" class="items"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button onclick="printPendingReceipt()" id="printPreviewBtn">Cetak</button>
+        <button class="ghost" onclick="closeReceiptPreview()">Tutup</button>
+        <button onclick="finalizePendingSale()" id="finalizeBtn" style="background:#0b8b3e">Selesaikan Penjualan</button>
+      </div>
+    </div>
+  </div>
+
   <!-- receipt area template (hidden) -->
   <div id="receiptTemplate" style="display:none">
     <div id="receiptArea"></div>
   </div>
+
+  <!-- toast -->
+  <div id="appToast" style="display:none"></div>
 
 <script>
 /* ---------- data ---------- */
@@ -911,20 +1030,24 @@ function getLocalDateTime(){
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
-function parseStoredDate(dStr){
-  if(!dStr) return null;
-  let iso = dStr;
-  if(dStr.indexOf(' ') !== -1 && dStr.indexOf('T') === -1){
-    iso = dStr.replace(' ', 'T');
+/* ---------- toast ---------- */
+function showToast(msg, duration = 2500){
+  try{
+    let t = document.getElementById('appToast');
+    if(!t){
+      t = document.createElement('div'); t.id = 'appToast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.display = 'block';
+    requestAnimationFrame(()=> t.classList.add('show'));
+    setTimeout(()=> {
+      t.classList.remove('show');
+      setTimeout(()=> { try{ t.style.display='none' }catch(e){} }, 300);
+    }, duration);
+  }catch(e){
+    try{ alert(msg) }catch(_){}
   }
-  const d = new Date(iso);
-  if(isNaN(d.getTime())){
-    const alt = dStr.replace(/\//g,'-').replace(' ', 'T');
-    const d2 = new Date(alt);
-    if(isNaN(d2.getTime())) return null;
-    return d2;
-  }
-  return d;
 }
 
 /* ---------- render product list (dengan notif jika kosong) ---------- */
@@ -950,7 +1073,6 @@ function render(){
     }
   })
   if(matched === 0){
-    // tampilkan baris pemberitahuan (bukan alert)
     const tr=document.createElement("tr")
     tr.innerHTML = `<td colspan="5" class="muted" style="text-align:center;padding:14px">Tidak ada produk yang sesuai</td>`
     tbl.appendChild(tr)
@@ -977,9 +1099,7 @@ function submitProduct(){
   localStorage.setItem("products", JSON.stringify(products))
   render()
   resetForm()
-
-  // ✅ Tambahkan notifikasi sukses
-  alert("Berhasil ditambahkan!")
+  showToast("Berhasil ditambahkan!")
 }
 
 function resetForm(){
@@ -1012,37 +1132,44 @@ function updateRestockDropdown(){
   if(!sel) return
   sel.innerHTML='<option value="">Pilih Produk...</option>'
   products.forEach(p=>{
-    const opt=document.createElement("option")
+    const opt=document.createElement('option')
     opt.value=p.sku; opt.textContent=p.name
     sel.appendChild(opt)
   })
 }
 
-/* ---------- restock (simpan dengan format dapat diparse) ---------- */
-function restockProduct(){
-  const sku=document.getElementById("restockName").value
-  const qty=parseInt(document.getElementById("restockQty").value)
-  if(!sku||!qty) return alert("Pilih produk & jumlah!")
-  const p=products.find(x=>x.sku===sku)
-  if(!p) return alert("Produk tidak ditemukan")
+/* ---------- restock ---------- */
+function restockProduct(event){
+  if(event) event.preventDefault(); // cegah reload halaman
 
-  p.qty+=qty
-  localStorage.setItem("products",JSON.stringify(products))
+  const sku = document.getElementById("restockName").value;
+  const qty = parseInt(document.getElementById("restockQty").value);
+  if(!sku || !qty) return alert("Pilih produk & jumlah!");
+  
+  const p = products.find(x => x.sku === sku);
+  if(!p) return alert("Produk tidak ditemukan");
 
+  // tambahkan stok
+  p.qty += qty;
+  localStorage.setItem("products", JSON.stringify(products));
+
+  // simpan riwayat restock
   restocks.push({
-    date:getLocalDateTime(), // simpan format "YYYY-MM-DD HH:mm:ss"
-    sku:p.sku,
-    name:p.name,
+    date: getLocalDateTime(),
+    sku: p.sku,
+    name: p.name,
     qty,
-    stockAfter:p.qty
-  })
-  localStorage.setItem("restocks",JSON.stringify(restocks))
+    stockAfter: p.qty
+  });
+  localStorage.setItem("restocks", JSON.stringify(restocks));
 
-  render(); document.getElementById("restockQty").value=""
-  loadRestock()
+  // perbarui tampilan
+  render();
+  document.getElementById("restockQty").value = "";
+  loadRestock();
+  showToast("Stok berhasil ditambahkan!");
 }
-
-/* ---------- CART & CHECKOUT (diubah alurnya) ---------- */
+/* ---------- CART & CHECKOUT ---------- */
 function addToCart(sku){
   const p=products.find(x=>x.sku===sku)
   if(!p) return alert("Produk tidak ditemukan")
@@ -1078,7 +1205,6 @@ function renderCart(){
       <button class="small ghost" onclick="removeFromCart('${c.sku}')">-</button>
     </td>
   </tr>`;
-
   })
   html+="</table>"
   el.innerHTML=html
@@ -1097,14 +1223,13 @@ function renderCart(){
 
 function removeFromCart(sku){cart=cart.filter(c=>c.sku!==sku); renderCart()}
 function clearCart(){ 
-  // clear cart, reset pendingPaidInvoice if any (safety)
   cart=[]; 
   pendingPaidInvoice = null; 
   localStorage.removeItem('pendingPaidInvoice');
   renderCart()
 }
 
-/* ---------- printer preference helpers ---------- */
+/* ---------- printer preference ---------- */
 function loadPrinterPreference(){
   const p = localStorage.getItem('preferredPrinter') || ''
   const sel = document.getElementById('printerSelect')
@@ -1114,10 +1239,10 @@ function savePrinterPreference(){
   const sel = document.getElementById('printerSelect')
   if(!sel) return
   localStorage.setItem('preferredPrinter', sel.value)
-  alert(sel.value ? 'Preferensi printer disimpan: ' + sel.value : 'Preferensi printer dikosongkan')
+  showToast(sel.value ? 'Preferensi printer disimpan: ' + sel.value : 'Preferensi printer dikosongkan')
 }
 
-/* ---------- Restock export & clear ---------- */
+/* ---------- Restock load/export ---------- */
 function loadRestock(){
   const tbl=document.querySelector("#restockTbl tbody")
   tbl.innerHTML=""
@@ -1147,95 +1272,19 @@ function exportRestock(){
   downloadCSV(csv, "laporan_restock_all.csv");
 }
 
-function exportRestockByMonth(){
-  const m = document.getElementById('restockMonth').value // "YYYY-MM"
-  if(!m) return alert("Pilih bulan terlebih dahulu")
-  const [yy,mm] = m.split('-').map(x=>parseInt(x,10))
-  const filtered = restocks.filter(r=>{
-    const d = parseStoredDate(r.date)
-    if(!d) return false
-    return d.getFullYear() === yy && (d.getMonth()+1) === mm
-  })
-  if(filtered.length===0) return alert("Tidak ada data restock untuk bulan ini")
-  let csv = "No;Tanggal;SKU;Nama;Jumlah;StokAkhir\n";
-  filtered.forEach((r,i)=>{
-    const d = getCsvDateFromRecord(r);
-    csv += `${i+1};"${d}";"${r.sku}";"${r.name}";"${r.qty}";"${r.stockAfter}"\n`;
-  });
-  downloadCSV(csv, `laporan_restock_${m}.csv`);
-}
+/* ---------- PAYMENT FLOW (updated per request) ---------- */
 
-function exportRestockByRange(){
-  const from = document.getElementById('restockExportFrom').value
-  const to = document.getElementById('restockExportTo').value
-  if(!from || !to) return alert("Pilih tanggal dari & sampai terlebih dahulu")
-  const fromD = new Date(from)
-  const toD = new Date(to)
-  toD.setHours(23,59,59,999)
-  const filtered = restocks.filter(r=>{
-    const d = parseStoredDate(r.date)
-    if(!d) return false
-    return d >= fromD && d <= toD
-  })
-  if(filtered.length===0) return alert("Tidak ada data restock untuk rentang tanggal ini")
-  let csv = "No;Tanggal;SKU;Nama;Jumlah;StokAkhir\n";
-  filtered.forEach((r,i)=>{
-    const d = getCsvDateFromRecord(r);
-    csv += `${i+1};"${d}";"${r.sku}";"${r.name}";"${r.qty}";"${r.stockAfter}"\n`;
-  });
-  const fn = `laporan_restock_${from.replace(/-/g,'')}_${to.replace(/-/g,'')}.csv`;
-  downloadCSV(csv, fn);
-}
-
-function clearRestocks(){
-  if(!confirm("Hapus semua data restock?")) return;
-  restocks = [];
-  localStorage.setItem('restocks', JSON.stringify(restocks));
-  loadRestock();
-  alert("Laporan restock berhasil dihapus.");
-}
-
-/* ---------- CSV helper ---------- */
-function getCsvDateFromRecord(rec){
-  let dObj = null;
-
-  if(rec && rec.date){
-    dObj = parseStoredDate(rec.date);
-  }
-  if((!dObj || isNaN(dObj)) && rec && rec.dateDisplay){
-    dObj = parseStoredDate(rec.dateDisplay);
-  }
-
-  if(dObj && !isNaN(dObj)){
-    const yyyy = dObj.getFullYear();
-    const mm = String(dObj.getMonth()+1).padStart(2,"0");
-    const dd = String(dObj.getDate()).padStart(2,"0");
-    const hh = String(dObj.getHours()).padStart(2,"0");
-    const mi = String(dObj.getMinutes()).padStart(2,"0");
-    const ss = String(dObj.getSeconds()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-  }
-
-  return rec.dateDisplay || "";
-}
-
-/* ---------- NEW: PAYMENT FLOW ---------- */
-
-/** checkout() sekarang buka modal pembayaran.
-    Jika sudah ada pendingPaidInvoice untuk cart saat ini => jalankan finishSale */
+/* open payment modal */
 function checkout(){
-  // jika sudah ada invoice yang sudah dibayar tapi belum diselesaikan
+  // if there is a pending paid invoice, prompt to finalize
   if(pendingPaidInvoice){
-    // panggil finish sale untuk invoice itu
-    finishSale(pendingPaidInvoice);
+    // open receipt preview so user can finalize
+    openReceiptPreview(pendingPaidInvoice);
     return;
   }
 
   if(cart.length === 0) return alert("Keranjang kosong")
-  openPaymentModal()
-}
-
-function openPaymentModal(){
+  // open payment modal
   selectedPaymentMethod = null
   document.querySelectorAll('.pm-btn').forEach(b=>b.classList.remove('active'))
   document.getElementById('payDebug').textContent = ''
@@ -1244,11 +1293,13 @@ function openPaymentModal(){
   document.getElementById('paymentModal').style.display = 'flex'
 }
 
+/* close payment modal */
 function closePaymentModal(){
   document.getElementById('paymentModal').style.display = 'none'
   selectedPaymentMethod = null
 }
 
+/* select payment method */
 function selectPaymentMethod(method, el){
   selectedPaymentMethod = method
   document.querySelectorAll('.pm-btn').forEach(b=>b.classList.remove('active'))
@@ -1261,111 +1312,161 @@ function selectPaymentMethod(method, el){
   document.getElementById('paymentInfoBox').innerHTML = `<div class="pay-instr">${info}</div><div>Total: <strong id="payTotal">Rp ${cart.reduce((s,i)=>s+i.price*i.qty,0).toLocaleString()}</strong></div>`
 }
 
-/* Konfirmasi pembayaran (simulasi). Pada integrasi nyata, replace confirmPayment dengan panggilan backend/gateway. */
+/* confirm payment: immediately reduce stock, create pending transaction, show receipt preview (print allowed), but DO NOT finalize sale yet */
 function confirmPayment(){
   if(!selectedPaymentMethod) return alert("Pilih metode pembayaran terlebih dahulu")
-  // disable tombol sebentar
+  if(cart.length === 0) return alert("Keranjang kosong")
+
+  // disable button briefly
   const btn = document.getElementById('confirmPayBtn')
   btn.disabled = true
   btn.textContent = "Memproses..."
-  setTimeout(()=>{
-    // simulasi sukses
+  setTimeout(()=> {
+    // create invoice and transaction
     const invoice = 'INV' + Date.now()
     const now = new Date()
     const date = now.toISOString()
     const dateDisplay = now.toLocaleString()
     const total = cart.reduce((s,i)=>s + i.price*i.qty, 0)
 
-    // Simpan sebagai paid transaction — masuk laporan penjualan sesuai permintaan
     const transaction = {
       invoice,
       date,
       dateDisplay,
-      items: JSON.parse(JSON.stringify(cart)), // simpan items saat bayar
+      items: JSON.parse(JSON.stringify(cart)), // snapshot of items
       total,
       method: selectedPaymentMethod,
-      status: 'paid',      // sudah dibayar, tapi belum diselesaikan (stok belum dikurangi)
-      finalized: false
+      status: 'paid',      // already paid
+      finalized: false,
+      completedAt: null
     }
 
+    // 1) reduce stock immediately (per request)
+    transaction.items.forEach(it => {
+      const p = products.find(x=>x.sku===it.sku)
+      if(p){
+        p.qty = Math.max(0, p.qty - it.qty)
+      }
+    })
+
+    // 2) save products & sales (save as pending sale in sales list)
     sales.push(transaction)
     localStorage.setItem('sales', JSON.stringify(sales))
+    localStorage.setItem('products', JSON.stringify(products))
 
-    // tandai pendingPaidInvoice supaya tombol berubah jadi "Selesaikan Penjualan"
+    // 3) mark pendingPaidInvoice so UI shows "Selesaikan Penjualan"
     pendingPaidInvoice = invoice
     localStorage.setItem('pendingPaidInvoice', invoice)
 
+    // 4) close payment modal and show receipt preview modal with transaction details
     btn.disabled = false
     btn.textContent = "Konfirmasi Pembayaran"
     closePaymentModal()
-    renderCart()
-    alert("Pembayaran berhasil dicatat. Invoice: " + invoice + ". Tekan tombol Selesaikan Penjualan untuk finalisasi & mencetak struk.")
-  }, 900) // simulasi delay
+    renderCart(); renderFinalStock(); loadRestock()
+
+    // open preview
+    openReceiptPreview(invoice)
+
+    showToast("Pembayaran tercatat. Cetak struk atau selesaikan penjualan untuk memasukkan laporan.")
+  }, 700)
 }
 
-/* finishSale: finalisasi stok, print jika perlu, ubah status sale jadi completed */
-function finishSale(invoice){
-  // cari transaksi di sales
-  const txIndex = sales.findIndex(s=>s.invoice===invoice)
-  if(txIndex === -1) return alert("Transaksi tidak ditemukan")
-  const tx = sales[txIndex]
+/* open receipt preview modal for given invoice */
+function openReceiptPreview(invoice){
+  const tx = sales.find(s=>s.invoice===invoice)
+  if(!tx) return alert("Transaksi tidak ditemukan")
+  const modal = document.getElementById('receiptPreviewModal')
+  const content = document.getElementById('receiptPreviewContent')
+  content.innerHTML = `<div class="muted">Invoice: <strong>${tx.invoice}</strong></div>
+    <div class="muted">Tanggal: ${tx.dateDisplay || tx.date}</div>
+    <table style="width:100%;margin-top:8px;border-collapse:collapse">
+      <thead><tr><th style="text-align:left">Nama</th><th style="text-align:center">Qty</th><th style="text-align:right">Subtotal</th></tr></thead>
+      <tbody>
+        ${tx.items.map(i=>`<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">Rp ${(i.price*i.qty).toLocaleString()}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="text-align:right;margin-top:8px;font-weight:600">Total: Rp ${tx.total.toLocaleString()}</div>
+    <div style="margin-top:6px" class="muted">Metode: ${tx.method || '-'}</div>
+  `
+  document.getElementById('receiptPreviewModal').style.display = 'flex'
+}
+
+/* close receipt preview */
+function closeReceiptPreview(){
+  document.getElementById('receiptPreviewModal').style.display = 'none'
+}
+
+/* print pending receipt (does NOT finalize sale) */
+function printPendingReceipt(){
+  if(!pendingPaidInvoice) return alert("Tidak ada struk yang bisa dicetak.")
+  const tx = sales.find(s=>s.invoice===pendingPaidInvoice)
+  if(!tx) return alert("Transaksi tidak ditemukan")
+  try{
+    printReceipt(tx)
+    showToast("Dialog cetak terbuka.")
+  }catch(e){
+    alert("Gagal membuka dialog cetak: " + e)
+  }
+}
+
+/* finalizePendingSale: mark sale as finalized and add to daily report. This does NOT change stock (already reduced on confirm). */
+function finalizePendingSale(){
+  if(!pendingPaidInvoice) return alert("Tidak ada transaksi untuk diselesaikan.")
+  const idx = sales.findIndex(s => s.invoice === pendingPaidInvoice)
+  if(idx === -1) return alert("Transaksi tidak ditemukan")
+  const tx = sales[idx]
   if(tx.finalized){
-    // jika sudah final, beri info
-    alert("Transaksi sudah diselesaikan: " + invoice)
-    // clear pending state
+    showToast("Transaksi sudah diselesaikan.")
+    document.getElementById('receiptPreviewModal').style.display = 'none'
     pendingPaidInvoice = null
     localStorage.removeItem('pendingPaidInvoice')
-    renderCart(); render(); renderFinalStock()
+    renderCart(); renderFinalStock()
     return
   }
 
-  // Kurangi stok produk berdasarkan items yang disimpan pada saat bayar
-  tx.items.forEach(it=>{
-    const p = products.find(x=>x.sku===it.sku)
-    if(p){
-      p.qty = Math.max(0, p.qty - it.qty)
-    }
-  })
-  // update sale record
-  tx.status = 'completed'
   tx.finalized = true
+  tx.status = 'completed'
   tx.completedAt = getLocalDateTime()
-
-  // simpan perubahan
-  localStorage.setItem('products', JSON.stringify(products))
+  sales[idx] = tx
   localStorage.setItem('sales', JSON.stringify(sales))
 
-  // auto-print jika diinginkan
-  const auto = document.getElementById("autoPrint").checked
-  const preferred = localStorage.getItem('preferredPrinter') || ''
-  if(auto){
-    if(!preferred){
-      alert("Cetak otomatis aktif tetapi tidak ada printer yang dipilih. Silahkan pilih & simpan printer terlebih dahulu.")
-    } else {
-      try{
-        printReceipt(tx)
-      } catch(e) {
-        console.error(e)
-        alert("Gagal mencetak secara otomatis. Pastikan printer terhubung.")
-      }
-    }
-  }
-
-  // jika autoPrint non aktif, tetap tawarkan cetak
-  const doPrint = confirm("Penjualan selesai. Mau cetak struk sekarang?")
-  if(doPrint) printReceipt(tx)
-
-  // clear pending and cart
+  // clear pending, clear cart (sale has been finalized)
   pendingPaidInvoice = null
   localStorage.removeItem('pendingPaidInvoice')
   cart = []
-  renderCart(); render(); renderFinalStock()
-  alert("Penjualan selesai dan stok diperbarui. Invoice: " + invoice)
+  renderCart(); renderFinalStock(); loadRestock()
+
+  document.getElementById('receiptPreviewModal').style.display = 'none'
+  showToast("Penjualan diselesaikan dan masuk ke laporan.")
+}
+
+/* finishSale kept for backward compat (calls finalizePendingSale) */
+function finishSale(invoice){
+  // Mark finalized if exists
+  const idx = sales.findIndex(s => s.invoice === invoice)
+  if(idx === -1) return alert("Transaksi tidak ditemukan")
+  const tx = sales[idx]
+  if(tx.finalized){
+    showToast("Transaksi sudah diselesaikan.")
+    return
+  }
+  // finalize
+  tx.finalized = true
+  tx.status = 'completed'
+  tx.completedAt = getLocalDateTime()
+  sales[idx] = tx
+  localStorage.setItem('sales', JSON.stringify(sales))
+
+  // clear pending
+  pendingPaidInvoice = null
+  localStorage.removeItem('pendingPaidInvoice')
+  cart = []
+  renderCart(); renderFinalStock(); loadRestock()
+  showToast("Penjualan selesai.")
 }
 
 /* ---------- print receipt (opens print dialog) ---------- */
 function printReceipt(t){
-  // buat konten struk
   let html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:8px">`
   html += `<h3 style="margin:4px 0">Struk Pembelian</h3>`
   html += `<div>Invoice: ${t.invoice}</div>`
@@ -1396,12 +1497,14 @@ function printReceipt(t){
     throw e
   }
 }
-  
+
+/* ---------- SCAN and GUIDE etc (unchanged) ---------- */
 /* ---------- SCAN (dengan handling stok 0 & not found) ---------- */
 let html5QrcodeScanner = null;
 let scanTarget = null;
 
 function openCamera(target) {
+  // ensure scanTarget is set so handleScan can behave differently
   scanTarget = target;
   const camModal = document.getElementById('cameraModal');
   camModal.style.display = 'flex';
@@ -1414,12 +1517,8 @@ function openCamera(target) {
   const config = { fps: 10, qrbox: 250 };
 
   html5QrcodeScanner.start({ facingMode: "environment" }, config, msg => {
-    // setiap hasil scan akan melalui handleScan
     handleScan(msg);
-    if (document.getElementById("scanMode")?.value === "single") {
-      // jika single, kita stop setelah satu hasil (selesai setelah handleScan)
-      // stopCamera() di-handle di dalam handleScan ketika berhasil/invalid
-    }
+    // for sale scanning, we stop inside handleScan when mode=single
   }).catch(err => {
     console.error(err);
     alert("Gagal mengakses kamera: " + err);
@@ -1444,7 +1543,6 @@ function stopCamera() {
 function closeCamera() { stopCamera(); }
 
 function showCameraAlert(message){
-  // stop scanner first
   try{ if(html5QrcodeScanner) { html5QrcodeScanner.stop().catch(()=>{}); html5QrcodeScanner=null; } }catch(e){}
   const alertEl = document.getElementById('cameraAlert')
   const msgEl = document.getElementById('cameraAlertMsg')
@@ -1459,40 +1557,76 @@ function hideCameraAlert(){
 
 function closeCameraAlert(){
   hideCameraAlert()
-  // close entire camera modal after acknowledging
   closeCamera()
 }
 
+/* ---------- REPLACED handleScan: mode-aware (sku/restock/sell) ---------- */
 function handleScan(msg) {
-  // msg biasanya sku string
-  const sku = String(msg).trim()
-  const p = products.find(x=>x.sku===sku)
-  if(!p){
-    // produk tidak ditemukan => stop scanner & tampilkan pesan
-    showCameraAlert("Produk tidak ditemukan di daftar. Tambahkan produk terlebih dahulu.")
-    return
-  }
-  if(p.qty <= 0){
-    // jika stok 0 -> hentikan scanner dan tampilkan pesan, kamera tidak melanjutkan memasukkan ke cart
-    showCameraAlert("Produk telah habis, isi stok dahulu")
-    return
+  const sku = String(msg).trim();
+
+  // Mode: filling SKU for Add Product form
+  if (scanTarget === 'sku') {
+    const skuInput = document.getElementById('sku');
+    if (skuInput) {
+      skuInput.value = sku;
+      // focus next field so user can continue entering product data
+      const nameInput = document.getElementById('name');
+      if (nameInput) nameInput.focus();
+      showToast('SKU dipindai: ' + sku, 1400);
+    }
+    // close camera after filling SKU
+    stopCamera();
+    return;
   }
 
-  // jika produk ada & stok > 0 -> lanjutkan ke keranjang
-  addToCart(sku)
-  // jika mode single, stop camera setelah berhasil menambahkan
-  if(document.getElementById("scanMode")?.value === "single"){
-    stopCamera()
+  // Mode: restock selection (optional)
+  if (scanTarget === 'restock') {
+    const p = products.find(x => x.sku === sku);
+    if (!p) {
+      showCameraAlert("Produk tidak ditemukan di daftar. Tambahkan produk terlebih dahulu.");
+      return;
+    }
+    const sel = document.getElementById('restockName');
+    if (sel) {
+      // add option if not present
+      if (!Array.from(sel.options).some(o => o.value === sku)) {
+        const opt = document.createElement('option');
+        opt.value = sku;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      }
+      sel.value = sku;
+      const qtyEl = document.getElementById('restockQty');
+      if (qtyEl) qtyEl.focus();
+      showToast('Produk dipilih untuk restock: ' + p.name, 1400);
+    }
+    stopCamera();
+    return;
+  }
+
+  // Default: sale-scan behavior (add to cart)
+  const p = products.find(x => x.sku === sku);
+  if (!p) {
+    showCameraAlert("Produk tidak ditemukan di daftar. Tambahkan produk terlebih dahulu.");
+    return;
+  }
+  if (p.qty <= 0) {
+    showCameraAlert("Produk telah habis, isi stok dahulu");
+    return;
+  }
+
+  addToCart(sku);
+
+  if (document.getElementById("scanMode")?.value === "single") {
+    stopCamera();
   }
 }
 
 function scanSku() { openCamera("sku"); }
 function startScan(target) { openCamera(target); }
 
-/* === GUIDE INTERAKTIF (IIFE) with improved showStep placement and responsive handling === */
-
+/* === GUIDE INTERAKTIF (IIFE) simplified reference (kept as before) === */
 (function(){
-  // safe globals for guide
   window.guideSteps = window.guideSteps || [
     { selector: "#formProduct", text: "🧾 Tambahkan produk baru di sini. Isi kode, nama, harga, dan stok." },
     { selector: "#formRestock", text: "📦 Tambah stok barang yang sudah ada dengan form Restock ini." },
@@ -1552,7 +1686,7 @@ function startScan(target) { openCamera(target); }
     }
   }
 
-  // smoother showStep implemented above - reuse the function definition
+  // showStep (kept from previous implementation; it's long - works as earlier)
   async function showStep(i) {
     const steps = window.guideSteps || [];
     if (!steps || steps.length === 0) return endGuide();
@@ -1574,6 +1708,15 @@ function startScan(target) { openCamera(target); }
     }
 
     createGuideElements();
+
+    function skipGuide(){
+      window.guideActive = false;
+    try {
+      document.getElementById("highlightBox")?.remove();
+      document.getElementById("guideTooltip")?.remove();
+    } catch(e){}
+      showToast("Panduan dihentikan.");
+    }
 
     // Helper: wait for scroll to settle by observing scroll events and element bounding changes
     function waitForElementCentered(element, timeout = 900, settleMs = 110, tolerancePx = 36) {
@@ -1628,20 +1771,15 @@ function startScan(target) { openCamera(target); }
       });
     }
 
-    // Start smooth scroll (best-effort)
     try {
       el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     } catch (e) {
       try { el.scrollIntoView(true); } catch (e) {}
     }
 
-    // Wait until element is reasonably centered / scroll settled (improves on Android Chrome)
     await waitForElementCentered(el, 1200, 120, 40);
-
-    // micro-delay to let browser paint/layout
     await new Promise(r => setTimeout(r, 28));
 
-    // compute new rect AFTER scroll settled
     const rect = el.getBoundingClientRect();
     const padding = 8;
     const targetTop = rect.top + window.scrollY - padding;
@@ -1649,19 +1787,16 @@ function startScan(target) { openCamera(target); }
     const targetWidth = Math.max(80, rect.width + padding * 2) + "px";
     const targetHeight = Math.max(36, rect.height + padding * 2) + "px";
 
-    // Ensure highlightBox visible and animate to its new position/size via CSS transitions
     highlightBox.style.display = "block";
     highlightBox.style.width = targetWidth;
     highlightBox.style.height = targetHeight;
     highlightBox.style.top = targetTop + "px";
     highlightBox.style.left = targetLeft + "px";
 
-    // Prepare tooltip: fade-out current tooltip smoothly (if visible), reposition, then fade-in
     tooltip.style.transition = "opacity 140ms cubic-bezier(.22,.9,.35,1), transform 180ms cubic-bezier(.22,.9,.35,1)";
     tooltip.style.opacity = 0;
     tooltip.style.transform = "translateY(6px)";
 
-    // wait a small amount to allow fade-out
     await new Promise(r => setTimeout(r, 130));
 
     const isLast = i === steps.length - 1;
@@ -1674,7 +1809,7 @@ function startScan(target) { openCamera(target); }
       </div>
     `;
 
-    // Adaptive placement logic (kept, but applied after scroll settled)
+    // adaptive placement (same as before)...
     const defaultTooltipWidth = 320;
     const tooltipHeight = 140;
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -1692,7 +1827,7 @@ function startScan(target) { openCamera(target); }
         left = rect.right + window.scrollX + 12;
       } else if (spaceLeft > tooltipWidth + 20) {
         tooltipTop = topCentered;
-        left = rect.left + window.scrollX - tooltipWidth - 12;
+        left = rect.left + window.scrollY - tooltipWidth - 12;
       } else {
         if (spaceBelow > tooltipHeight + 20) {
           tooltipTop = rect.bottom + window.scrollY + 12;
@@ -1701,7 +1836,7 @@ function startScan(target) { openCamera(target); }
         } else {
           tooltipTop = topCentered;
         }
-        left = Math.min(Math.max(rect.left + window.scrollX - 40, 10), window.innerWidth + window.scrollX - (tooltipWidth + 40));
+        left = Math.min(Math.max(rect.left + window.scrollY - 40, 10), window.innerWidth + window.scrollX - (tooltipWidth + 40));
       }
     } else if (step.selector === '#btnStartScan') {
       tooltipWidth = 260;
@@ -1723,7 +1858,7 @@ function startScan(target) { openCamera(target); }
         } else {
           tooltipTop = window.scrollY + window.innerHeight / 2 - tooltipHeight / 2;
         }
-        left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+        left = rect.left + window.scrollY + (rect.width / 2) - (tooltipWidth / 2);
       }
 
       const minLeft = window.scrollX + 8;
@@ -1753,24 +1888,21 @@ function startScan(target) { openCamera(target); }
       if (left < 10) left = 10;
     }
 
-    // Apply tooltip position and then fade/slide in
     tooltip.style.left = (left || 10) + "px";
     tooltip.style.top = (tooltipTop || (window.scrollY + 20)) + "px";
     tooltip.style.display = "block";
 
-    // Use rAF to ensure the browser registers the position change, then animate opacity/transform
     requestAnimationFrame(() => {
       tooltip.style.opacity = 1;
       tooltip.style.transform = "translateY(0)";
     });
 
-    // attach next button handler
     const nextBtn = document.getElementById("guideNextBtn");
     if (nextBtn) {
       nextBtn.onclick = function (e) {
         e.preventDefault();
         nextBtn.disabled = true;
-        setTimeout(() => nextGuide(), 80);
+        setTimeout(()=> nextGuide(), 80);
       };
     }
   }
@@ -1795,7 +1927,7 @@ function startScan(target) { openCamera(target); }
     const overlay = document.getElementById("guideOverlay");
     if(overlay) overlay.style.display = "none";
     currentStep = 0;
-    setTimeout(()=>{ alert("🎉 Tutorial selesai!"); }, 80);
+    setTimeout(()=>{ showToast("🎉 Tutorial selesai!",1600); }, 80);
   }
 
   function startGuide(){
@@ -1821,40 +1953,9 @@ function startScan(target) { openCamera(target); }
   window.startGuide = startGuide;
   window.skipGuide = skipGuide;
 })();
-</script>
 
-<script>
-/* ---------- INIT & REPORTS ---------- */
-document.addEventListener("DOMContentLoaded", () => {
-  const guide = document.getElementById("guideOverlay");
-  const cam = document.getElementById("cameraModal");
-
-  if (guide) {
-    guide.style.display = "flex";
-    guide.style.zIndex = "99999";
-    guide.style.pointerEvents = "auto";
-  }
-  if (cam) {
-    cam.style.display = "none";
-    cam.style.pointerEvents = "none";
-    cam.style.zIndex = "9000";
-  }
-
-  document.querySelectorAll("#guideBox button").forEach(btn => {
-    btn.style.pointerEvents = "auto";
-    btn.style.cursor = "pointer";
-  });
-});
-
-/* ---------- TABS ---------- */
-function openTab(id){
-  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"))
-  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"))
-  document.querySelector(`[onclick="openTab('${id}')"]`).classList.add("active")
-  document.getElementById(id).classList.add("active")
-}
-
-/* ---------- REPORTS with robust parsing & date filter ---------- */
+/* ---------- REPORTS & CSV ---------- */
+/* loadSales now only shows finalized transactions (as requested) */
 function loadSales(){
   const from=document.getElementById("filterFrom").value
   const to=document.getElementById("filterTo").value
@@ -1863,8 +1964,9 @@ function loadSales(){
 
   let counter = 1
   sales.forEach((s)=>{
-    const dObj = new Date(s.date)                         // selalu ISO
-    const d = s.dateDisplay || dObj.toLocaleString()      // tampilan lokal
+    if(!s.finalized) return; // only include finalized sales
+    const dObj = new Date(s.date)
+    const d = s.dateDisplay || dObj.toLocaleString()
 
     let valid=true
     if(from && dObj < new Date(from)) valid=false
@@ -1884,15 +1986,16 @@ function loadSales(){
   })
 }
 
-/* ---------- CSV export (safely parse date) ---------- */
+/* export only finalized sales */
 function exportSales(){
-  if(sales.length === 0) return alert("Tidak ada data penjualan");
+  const finalized = sales.filter(s => s.finalized)
+  if(finalized.length === 0) return alert("Tidak ada data penjualan");
 
   let csv = "No;Tanggal;Invoice;Item;Total\n";
   let counter = 1;
 
-  sales.forEach((s) => {
-    const d = getCsvDateFromRecord(s); // ambil tanggal yang aman
+  finalized.forEach((s) => {
+    const d = getCsvDateFromRecord(s);
     const items = s.items.map(x => `${x.name} x${x.qty}`).join(" | ");
     csv += `${counter};"${d}";"${s.invoice}";"${items}";"${s.total}"\n`;
     counter++;
@@ -1900,8 +2003,8 @@ function exportSales(){
 
   downloadCSV(csv, "laporan_penjualan.csv");
 }
-function printRestock(){ window.print() }
 
+/* ---------- helper downloadCSV ---------- */
 function downloadCSV(content, filename){
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
@@ -1913,15 +2016,7 @@ function downloadCSV(content, filename){
   document.body.removeChild(link);
 }
 
-  function clearSales(){
-  if(!confirm("Hapus semua laporan penjualan?")) return;
-  sales = [];
-  localStorage.setItem("sales", JSON.stringify(sales));
-  loadSales();
-  alert("Semua laporan penjualan berhasil dihapus.");
-}
-
-/* ---------- final stock ---------- */
+/* ---------- final stock rendering ---------- */
 function renderFinalStock(){
   const tbl=document.querySelector("#finalStockTbl tbody")
   tbl.innerHTML=""
@@ -1931,6 +2026,35 @@ function renderFinalStock(){
 }
 
 /* ---------- INIT ---------- */
+  function openTab(id){
+  // remove active state
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+
+  // set active on the button (robust selector)
+  let btn = document.querySelector(`.tab-btn[onclick*="openTab('${id}')"]`);
+  if(!btn){
+    // fallback: match double quotes variant
+    btn = document.querySelector(`.tab-btn[onclick*='openTab("${id}")']`);
+  }
+  if(btn) btn.classList.add("active");
+
+  // show content
+  const content = document.getElementById(id);
+  if(content) content.classList.add("active");
+
+  // call appropriate loader so tables are populated when tab opens
+  if(id === 'restock'){
+    // populate restock table immediately
+    try { loadRestock(); } catch(e){ console.error('loadRestock error', e); }
+  } else if(id === 'stok'){
+    // render final stock table
+    try { renderFinalStock(); } catch(e){ console.error('renderFinalStock error', e); }
+  } else if(id === 'penjualan'){
+    // for sales tab, call loadSales to apply filters if any
+    try { loadSales(); } catch(e){ console.error('loadSales error', e); }
+  }
+}
 function init(){
   const autoPrintEl = document.getElementById('autoPrint')
   if(autoPrintEl) autoPrintEl.checked = false
@@ -1939,6 +2063,7 @@ function init(){
 
   pendingPaidInvoice = localStorage.getItem('pendingPaidInvoice') || pendingPaidInvoice
 
+  // migrate dateDisplay if needed
   let updated = false
   sales.forEach(s => {
     if(s.date && !s.dateDisplay){
