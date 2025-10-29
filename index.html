@@ -1875,6 +1875,8 @@ function finalizePendingSale(){
   cart = []
 
   renderFinalStock();
+  renderCart();
+  render();
 
   document.getElementById('receiptPreviewModal').style.display = 'none'
   showToast("Penjualan diselesaikan.")
