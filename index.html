@@ -757,6 +757,8 @@
         <div id="restock" class="tab-content">
           <h3>Laporan Restock (Barang Masuk)</h3>
           <div class="flex" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <label class="muted">Dari <input id="filterRestockFrom" type="date" /></label>
+            <label class="muted">Sampai <input id="filterRestockTo" type="date" /></label>
             <button onclick="loadRestock()" class="small">Tampilkan</button>
             <button onclick="exportRestock()" class="small ghost">Export CSV Semua</button>
             <button onclick="printRestock()" class="small ghost">Cetak</button>
@@ -1258,7 +1260,6 @@ function restockProduct(event) {
   localStorage.setItem("restocks", JSON.stringify(restocks));
 
   render();
-  loadRestock(true);
   qtyInput.value = "";
 
   showRestockAlert(`✅ Anda berhasil menambahkan stok "${p.name}". Periksa kembali di daftar produk.`);
@@ -1442,24 +1443,55 @@ function parseStoredDate(dateString) {
 }
 
 /* ---------- Restock load/export ---------- */
+/* Perbaiki loadRestock agar aman tanpa error */
 function loadRestock(showNotification = true) {
-  const restocks = JSON.parse(localStorage.getItem("restocks")) || [];
   const tbody = document.getElementById("restockTableBody");
   if (!tbody) return;
 
-  tbody.innerHTML = "";
+  // Ambil nilai dari filter
+  const from = document.getElementById("filterRestockFrom").value;
+  const to = document.getElementById("filterRestockTo").value;
+  const month = document.getElementById("restockMonth").value; // Filter bulan tetap bisa dipakai
 
-  // 1. Cek apakah sama sekali belum ada data restock
-  if (restocks.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px" class="muted">Belum ada data restock.</td>`;
-    tbody.appendChild(tr);
-    if (showNotification) showRestockAlert("📭 Belum ada data restock sama sekali.");
+  // 1. Validasi: Cek apakah ada filter yang dipilih
+  if (!from && !to && !month) {
+    if (showNotification) {
+      showRestockAlert("⚠️ Silahkan pilih rentan tanggal/bulan/tahun dahulu sesuai data yang mau anda cari.");
+    }
+    // Tampilkan pesan di tabel
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:10px" class="muted">Pilih filter tanggal untuk melihat laporan.</td></tr>`;
     return;
   }
 
-  // 2. Jika ada data, tampilkan SEMUA data di tabel
-  restocks.slice().reverse().forEach((r, i) => {
+  const allRestocks = JSON.parse(localStorage.getItem("restocks")) || [];
+  tbody.innerHTML = "";
+
+  // 2. Filter data berdasarkan input
+  let filteredRestocks = allRestocks;
+  if (from && to) {
+    const startDate = new Date(from);
+    const endDate = new Date(to);
+    endDate.setHours(23, 59, 59, 999); // Sertakan seluruh tanggal 'Sampai'
+    filteredRestocks = allRestocks.filter(r => {
+      if (!r.date) return false;
+      const restockDate = new Date(r.date);
+      return restockDate >= startDate && restockDate <= endDate;
+    });
+  } else if (month) {
+    filteredRestocks = allRestocks.filter(r => r.date && r.date.startsWith(month));
+  }
+
+  // 3. Tampilkan hasil yang sudah difilter
+  if (filteredRestocks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:10px" class="muted">Tidak ada data restock pada periode yang dipilih.</td></tr>`;
+    if (showNotification) {
+      showRestockAlert("📭 Tidak ada data restok pada periode yang dipilih.");
+    }
+    return;
+  }
+
+  // Jika ada data, tampilkan di tabel
+  filteredRestocks.slice().reverse().forEach((r, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${i + 1}</td>
@@ -1472,7 +1504,6 @@ function loadRestock(showNotification = true) {
     tbody.appendChild(tr);
   });
 
-  // 3. Tampilkan notifikasi sukses karena data berhasil dimuat
   if (showNotification) {
     showRestockAlert("✅ Laporan restok ditampilkan.");
   }
@@ -1592,7 +1623,13 @@ function printRestock() {
 function clearRestocks() {
   if (!confirm("Yakin ingin menghapus semua data restock (barang masuk)?")) return;
   localStorage.removeItem("restocks");
-  loadRestock();
+  
+  // Kosongkan tabel secara manual dan tampilkan pesan
+  const tbody = document.getElementById("restockTableBody");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:10px" class="muted">Belum ada data restock.</td></tr>`;
+  }
+  
   showRestockAlert("🗑️ Semua data restock berhasil dihapus.");
 }
 
