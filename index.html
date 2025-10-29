@@ -1258,7 +1258,7 @@ function restockProduct(event) {
   localStorage.setItem("restocks", JSON.stringify(restocks));
 
   render();
-  loadRestock();
+  loadRestock(true);
   qtyInput.value = "";
 
   showRestockAlert(`✅ Anda berhasil menambahkan stok "${p.name}". Periksa kembali di daftar produk.`);
@@ -1443,7 +1443,7 @@ function parseStoredDate(dateString) {
 
 /* ---------- Restock load/export ---------- */
 /* Perbaiki loadRestock agar aman tanpa error */
-function loadRestock() {
+function loadRestock(showNotification = true) {
   const restocks = JSON.parse(localStorage.getItem("restocks")) || [];
   const tbody = document.getElementById("restockTableBody");
   if (!tbody) return;
@@ -1457,7 +1457,7 @@ function loadRestock() {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px" class="muted">Belum ada data restock.</td>`;
     tbody.appendChild(tr);
-    showRestockAlert("📭 Belum ada data restock sama sekali.");
+    if (showNotification) showRestockAlert("📭 Belum ada data restock sama sekali.");
     return;
   }
 
@@ -1481,12 +1481,13 @@ function loadRestock() {
   });
 
   // 3. Tampilkan notifikasi berdasarkan hasil pengecekan
-  if (hasTodayRestock) {
-    showRestockAlert("✅ Laporan restok ditampilkan.");
-  } else {
-    showRestockAlert("📭 Belum ada restock barang hari ini.");
+  if (showNotification) {
+    if (hasTodayRestock) {
+      showRestockAlert("✅ Laporan restok ditampilkan.");
+    } else {
+      showRestockAlert("📭 Belum ada restock barang hari ini.");
+    }
   }
-  // --- AKHIR LOGIKA NOTIFIKASI BARU ---
 }
   
   /* ======== TOMBOL TAMPILKAN ======== */
@@ -1753,7 +1754,7 @@ function confirmPayment(){
     btn.disabled = false
     btn.textContent = "Konfirmasi Pembayaran"
     closePaymentModal()
-    renderCart(); renderFinalStock(); loadRestock()
+    renderCart(); renderFinalStock(); loadSales();
 
     // open preview
     openReceiptPreview(invoice)
@@ -1972,7 +1973,7 @@ function printReceipt(t){
   showSalesAlert("🗑️ Semua data laporan penjualan berhasil dihapus.");
 
   // refresh tampilan
-  loadSales(); renderSalesTable();
+  renderSalesTable();
 }
   function clearSalesByRange() {
   const fromEl = document.getElementById("filterFrom");
@@ -2529,7 +2530,7 @@ document.addEventListener("keydown", function (e) {
 
 /* ---------- REPORTS & CSV ---------- */
 /* loadSales now only shows finalized transactions (as requested) */
-function loadSales(){
+function loadSales(showNotification = true) {
   const from = document.getElementById("filterFrom").value;
   const to = document.getElementById("filterTo").value;
   const tbl = document.querySelector("#salesTbl tbody");
@@ -2560,6 +2561,16 @@ function loadSales(){
       counter++;
     }
   });
+
+  // Tampilkan notifikasi berdasarkan hasil pencarian
+  if (showNotification) {
+    if (foundData) {
+      showToast("✅ Laporan penjualan ditampilkan.");
+    } else {
+      showToast("📭 Tidak ada data penjualan pada rentang tanggal tersebut.");
+    }
+  }
+}
 
   // Tampilkan notifikasi berdasarkan hasil pencarian
   if (foundData) {
