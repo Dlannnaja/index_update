@@ -1142,6 +1142,11 @@ function showToast(msg) {
   }, 2500);
 }
 
+  function showSalesAlert(message) {
+  // Kita gunakan showToast yang sudah ada agar notifikasinya konsisten
+  showToast(message);
+}
+
 
 /* ---------- render product list (dengan notif jika kosong) ---------- */
 function render(){
@@ -2518,33 +2523,43 @@ document.addEventListener("keydown", function (e) {
 /* ---------- REPORTS & CSV ---------- */
 /* loadSales now only shows finalized transactions (as requested) */
 function loadSales(){
-  const from=document.getElementById("filterFrom").value
-  const to=document.getElementById("filterTo").value
-  const tbl=document.querySelector("#salesTbl tbody")
-  tbl.innerHTML=""
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+  const tbl = document.querySelector("#salesTbl tbody");
+  tbl.innerHTML = "";
 
-  let counter = 1
-  sales.forEach((s)=>{
-    if(!s.finalized) return; // only include finalized sales
-    const dObj = new Date(s.date)
-    const d = s.dateDisplay || dObj.toLocaleString()
+  let counter = 1;
+  let foundData = false; // Tambahkan penanda untuk mengecek apakah ada data
 
-    let valid=true
-    if(from && dObj < new Date(from)) valid=false
-    if(to && dObj > new Date(to)) valid=false
+  sales.forEach((s) => {
+    if (!s.finalized) return; // only include finalized sales
+    const dObj = new Date(s.date);
+    const d = s.dateDisplay || dObj.toLocaleString();
 
-    if(valid){
-      tbl.innerHTML+=`
+    let valid = true;
+    if (from && dObj < new Date(from)) valid = false;
+    if (to && dObj > new Date(to)) valid = false;
+
+    if (valid) {
+      foundData = true; // Tandai bahwa ada data yang cocok
+      tbl.innerHTML += `
         <tr>
           <td>${counter}</td>
           <td>${d}</td>
           <td>${s.invoice}</td>
-          <td>${s.items.map(x=>x.name+" x"+x.qty).join(", ")}</td>
+          <td>${s.items.map(x => x.name + " x" + x.qty).join(", ")}</td>
           <td>Rp ${s.total.toLocaleString()}</td>
-        </tr>`
-      counter++
+        </tr>`;
+      counter++;
     }
-  })
+  });
+
+  // Tampilkan notifikasi berdasarkan hasil pencarian
+  if (foundData) {
+    showToast("✅ Laporan penjualan ditampilkan.");
+  } else {
+    showToast("📭 Tidak ada data penjualan pada rentang tanggal tersebut.");
+  }
 }
 
 /* export only finalized sales */
@@ -2650,7 +2665,7 @@ function init(){
   })
   if(updated) localStorage.setItem("sales", JSON.stringify(sales))
 
-  render(); renderFinalStock(); loadRestock(); setInterval(renderFinalStock,5000)
+  render(); renderFinalStock(); setInterval(renderFinalStock,5000)
   const guideOv = document.getElementById("guideOverlay");
   if(guideOv) guideOv.style.display = "flex";
 }
@@ -2753,7 +2768,7 @@ init();
 
   // ----- 5) Monitor localStorage changes: restore snapshot when modified -----
   (function(){
-    const watchedKeys = ['products','sales','restocks','pendingPaidInvoice'];
+    const watchedKeys = ['products','sales','pendingPaidInvoice'];
     // keep initial JSON strings
     const baseline = {};
     watchedKeys.forEach(k => baseline[k] = localStorage.getItem(k));
