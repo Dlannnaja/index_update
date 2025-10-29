@@ -1442,15 +1442,12 @@ function parseStoredDate(dateString) {
 }
 
 /* ---------- Restock load/export ---------- */
-/* Perbaiki loadRestock agar aman tanpa error */
 function loadRestock(showNotification = true) {
   const restocks = JSON.parse(localStorage.getItem("restocks")) || [];
   const tbody = document.getElementById("restockTableBody");
   if (!tbody) return;
 
   tbody.innerHTML = "";
-
-  // --- AWAL LOGIKA NOTIFIKASI BARU ---
 
   // 1. Cek apakah sama sekali belum ada data restock
   if (restocks.length === 0) {
@@ -1461,12 +1458,7 @@ function loadRestock(showNotification = true) {
     return;
   }
 
-  // 2. Jika ada data, cek apakah ada yang masuk hari ini
-  // Format tanggal di restocks adalah "YYYY-MM-DD HH:mm:ss", kita ambil bagian tanggalnya saja
-  const today = new Date().toISOString().split('T')[0]; 
-  const hasTodayRestock = restocks.some(r => r.date && r.date.startsWith(today));
-
-  // Tampilkan data di tabel
+  // 2. Jika ada data, tampilkan SEMUA data di tabel
   restocks.slice().reverse().forEach((r, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1480,13 +1472,9 @@ function loadRestock(showNotification = true) {
     tbody.appendChild(tr);
   });
 
-  // 3. Tampilkan notifikasi berdasarkan hasil pengecekan
+  // 3. Tampilkan notifikasi sukses karena data berhasil dimuat
   if (showNotification) {
-    if (hasTodayRestock) {
-      showRestockAlert("✅ Laporan restok ditampilkan.");
-    } else {
-      showRestockAlert("📭 Belum ada restock barang hari ini.");
-    }
+    showRestockAlert("✅ Laporan restok ditampilkan.");
   }
 }
   
