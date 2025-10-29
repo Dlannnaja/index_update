@@ -2803,7 +2803,7 @@ init();
 
   // ----- 5) Monitor localStorage changes: restore snapshot when modified -----
   (function(){
-    const watchedKeys = ['products','sales'];
+    const watchedKeys = ['products'];
     // keep initial JSON strings
     const baseline = {};
     watchedKeys.forEach(k => baseline[k] = localStorage.getItem(k));
