@@ -738,7 +738,7 @@
           <div class="flex">
             <label class="muted">From <input id="filterFrom" type="date" /></label>
             <label class="muted">To <input id="filterTo" type="date" /></label>
-            <button onclick="loadSales(); renderSalesTable()" class="small">Tampilkan</button>
+            <button onclick="loadSales()" class="small">Tampilkan</button>
             <button onclick="exportSales()" class="small ghost">Export CSV</button>
             <button onclick="printSales()" class="small ghost">Cetak</button>
             <button onclick="clearSales()" class="small ghost" title="Hapus laporan hari ini">Clear Laporan</button>
@@ -1678,15 +1678,6 @@ function confirmPayment(){
       dateDisplay,
       items: JSON.parse(JSON.stringify(cart)), // snapshot of items
       total,
-      // discount details recorded
-      discountPerProductRp: discountPerProductRp,
-      discountTotalPercent: discountTotalPercent,
-      totalsBreakdown: {
-        subtotalBefore: totals.subtotalBefore,
-        perProductDiscountTotal: totals.perProductDiscountTotal,
-        percentDiscountAmount: totals.percentDiscountAmount,
-        finalTotal: totals.finalTotal
-      },
       method: selectedPaymentMethod,
       status: 'paid',      // already paid
       finalized: false,
@@ -1729,37 +1720,19 @@ function openReceiptPreview(invoice){
   if(!tx) return alert("Transaksi tidak ditemukan")
   const modal = document.getElementById('receiptPreviewModal')
   const content = document.getElementById('receiptPreviewContent')
-
-  // build items with original price struck and discounted price
-  let itemsHtml = `<table style="width:100%;margin-top:8px;border-collapse:collapse">
-      <thead><tr><th style="text-align:left">Nama</th><th style="text-align:center">Qty</th><th style="text-align:right">Harga Normal</th></tr></thead>
-      <tbody>`
-  tx.items.forEach(i=>{
-    const normal = i.price * i.qty;
-    // per-item discount applied (nominal per unit)
-    const perItemDiscount = Math.min(normal, (tx.discountPerProductRp || 0) * i.qty);
-    const afterPerItem = normal - perItemDiscount;
-    itemsHtml += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right"><del>Rp ${normal.toLocaleString()}</del><br/>Rp ${afterPerItem.toLocaleString()}${perItemDiscount>0?` <small style=\"color:#16a34a\">(-${formatRupiahNumber(perItemDiscount)})</small>`:''}</td></tr>`;
-  })
-  itemsHtml += `</tbody></table>`;
-
-  let summaryHtml = `<div style="text-align:right;margin-top:8px;font-weight:600">Subtotal sebelum diskon: Rp ${tx.totalsBreakdown.subtotalBefore.toLocaleString()}</div>`;
-  if(tx.totalsBreakdown.perProductDiscountTotal > 0){
-    summaryHtml += `<div style="text-align:right;color:#16a34a">Potongan per produk: -${formatRupiahNumber(tx.totalsBreakdown.perProductDiscountTotal)}</div>`;
-  }
-  if(tx.totalsBreakdown.percentDiscountAmount > 0){
-    summaryHtml += `<div style="text-align:right;color:#16a34a">Diskon total belanja (${tx.discountTotalPercent}%): -${formatRupiahNumber(tx.totalsBreakdown.percentDiscountAmount)}</div>`;
-  }
-  summaryHtml += `<div style="text-align:right;margin-top:6px;font-size:1.1rem">Total akhir: Rp ${tx.totalsBreakdown.finalTotal.toLocaleString()}</div>`;
-
   content.innerHTML = `<div class="muted">Invoice: <strong>${tx.invoice}</strong></div>
     <div class="muted">Tanggal: ${tx.dateDisplay || tx.date}</div>
-    ${itemsHtml}
-    ${summaryHtml}
+    <table style="width:100%;margin-top:8px;border-collapse:collapse">
+      <thead><tr><th style="text-align:left">Nama</th><th style="text-align:center">Qty</th><th style="text-align:right">Subtotal</th></tr></thead>
+      <tbody>
+        ${tx.items.map(i=>`<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">Rp ${(i.price*i.qty).toLocaleString()}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="text-align:right;margin-top:8px;font-weight:600">Total: Rp ${tx.total.toLocaleString()}</div>
     <div style="margin-top:6px" class="muted">Metode: ${tx.method || '-'}</div>
   `
   document.getElementById('receiptPreviewModal').style.display = 'flex'
-
+}
 
 /* close receipt preview */
 function closeReceiptPreview(){
@@ -1839,7 +1812,6 @@ function finishSale(invoice){
 }
 
 /* ---------- print receipt (opens print dialog) ---------- */
-
 function printReceipt(t){
   let html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:8px">`
   html += `<h3 style="margin:4px 0">Struk Pembelian</h3>`
@@ -1848,40 +1820,15 @@ function printReceipt(t){
   html += `<div>Metode: ${t.method || '-'}</div>`
   html += `<hr/>`
   html += `<table style="width:100%;border-collapse:collapse;font-size:12px">`
-  html += `<tr><th align="left">Nama</th><th>Qty</th><th align="right">Harga</th></tr>`
+  html += `<tr><th align="left">Nama</th><th>Qty</th><th align="right">Subtotal</th></tr>`
   t.items.forEach(i=>{
-    const normal = i.price * i.qty;
-    const perItemDiscount = Math.min(normal, (t.discountPerProductRp || 0) * i.qty);
-    const afterPerItem = normal - perItemDiscount;
-    html += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right"><del>Rp ${normal.toLocaleString()}</del><br/>Rp ${afterPerItem.toLocaleString()}${perItemDiscount>0?` (-${formatRupiahNumber(perItemDiscount)})`:''}</td></tr>`
+    html += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">Rp ${(i.price*i.qty).toLocaleString()}</td></tr>`
   })
   html += `</table><hr/>`
-  // summary
-  html += `<div style="text-align:right">Subtotal sebelum diskon: Rp ${t.totalsBreakdown.subtotalBefore.toLocaleString()}</div>`
-  if(t.totalsBreakdown.perProductDiscountTotal > 0){
-    html += `<div style="text-align:right;color:#16a34a">Potongan per produk: -${formatRupiahNumber(t.totalsBreakdown.perProductDiscountTotal)}</div>`
+  // include discount info if present on transaction object (we'll check cart-level current discounts)
+  if(typeof discountPerProductRp !== 'undefined' && discountPerProductRp > 0){
+    html += `<div>Potongan per produk: ${formatRupiahNumber(discountPerProductRp)} / unit</div>`;
   }
-  if(t.totalsBreakdown.percentDiscountAmount > 0){
-    html += `<div style="text-align:right;color:#16a34a">Diskon total belanja (${t.discountTotalPercent}%): -${formatRupiahNumber(t.totalsBreakdown.percentDiscountAmount)}</div>`
-  }
-  html += `<h4 style="text-align:right;margin:6px 0">Total akhir: Rp ${t.totalsBreakdown.finalTotal.toLocaleString()}</h4>`
-  html += `</div>`
-
-  const w = window.open("","_blank","width=400,height=600")
-  if(!w) {
-    throw new Error("Popup blocked")
-  }
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  try{
-    w.print()
-    setTimeout(()=>{ try{ w.close() }catch(e){} }, 1200)
-  }catch(e){
-    try{ w.close() }catch(_) {}
-    throw e
-  }
-}
   if(typeof discountTotalPercent !== 'undefined' && discountTotalPercent > 0){
     html += `<div>Diskon total belanja: ${discountTotalPercent}%</div>`;
   }
@@ -1953,7 +1900,7 @@ function printReceipt(t){
   showSalesAlert("🗑️ Semua data laporan penjualan berhasil dihapus.");
 
   // refresh tampilan
-  loadSales(); renderSalesTable();
+  loadSales();
 }
   function clearSalesByRange() {
   const fromEl = document.getElementById("filterFrom");
@@ -1988,7 +1935,7 @@ function printReceipt(t){
   localStorage.setItem("sales", JSON.stringify(kept));
 
   // refresh tabel
-  loadSales(); renderSalesTable();
+  loadSales();
 
   // notifikasi sukses
   showSalesAlert("🗑️ Data laporan penjualan dalam rentang tanggal berhasil dihapus.");
@@ -2510,7 +2457,7 @@ document.addEventListener("keydown", function (e) {
 
 /* ---------- REPORTS & CSV ---------- */
 /* loadSales now only shows finalized transactions (as requested) */
-function loadSales(); renderSalesTable(){
+function loadSales(){
   const from=document.getElementById("filterFrom").value
   const to=document.getElementById("filterTo").value
   const tbl=document.querySelector("#salesTbl tbody")
@@ -2556,34 +2503,6 @@ function exportSales(){
   });
 
   downloadCSV(csv, "laporan_penjualan.csv");
-}
-
-function renderSalesTable(){
-  const tbody = document.querySelector("#salesTbl tbody");
-  tbody.innerHTML = "";
-  const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
-  if(!allSales.length){
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:10px" class="muted">Belum ada data penjualan.</td></tr>';
-    return;
-  }
-  allSales.slice().reverse().forEach((s, idx)=>{
-    // build item summary string
-    const itemNames = s.items.map(it=>`${it.name} x${it.qty}`).join(", ");
-    const before = s.totalsBreakdown ? s.totalsBreakdown.subtotalBefore : s.items.reduce((a,i)=>a + i.price*i.qty,0);
-    const perProd = s.totalsBreakdown ? s.totalsBreakdown.perProductDiscountTotal : 0;
-    const pct = s.totalsBreakdown ? s.totalsBreakdown.percentDiscountAmount : 0;
-    const finalT = s.totalsBreakdown ? s.totalsBreakdown.finalTotal : s.total;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${idx+1}</td>
-      <td>${s.dateDisplay || s.date}</td>
-      <td>${s.invoice}</td>
-      <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${itemNames}</td>
-      <td style="text-align:right">Rp ${before.toLocaleString()}</td>
-      <td style="text-align:right;color:#16a34a">-Rp ${perProd.toLocaleString()}</td>
-      <td style="text-align:right;color:#16a34a">-Rp ${pct.toLocaleString()}</td>
-      <td style="text-align:right;font-weight:700">Rp ${finalT.toLocaleString()}</td>`;
-    tbody.appendChild(tr);
-  });
 }
 
 /* ---------- helper downloadCSV ---------- */
@@ -2634,7 +2553,7 @@ function renderFinalStock(){
     try { renderFinalStock(); } catch(e){ console.error('renderFinalStock error', e); }
   } else if(id === 'penjualan'){
     // for sales tab, call loadSales to apply filters if any
-    try { loadSales(); renderSalesTable(); } catch(e){ console.error('loadSales error', e); }
+    try { loadSales(); } catch(e){ console.error('loadSales error', e); }
   }
 }
 function init(){
