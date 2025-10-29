@@ -1351,19 +1351,30 @@ function showRestockAlert(message) {
   
 /* ---------- CART & CHECKOUT ---------- */
 function addToCart(sku){
-  const p=products.find(x=>x.sku===sku)
-  if(!p) return alert("Produk tidak ditemukan")
-  if(p.qty <= 0) return alert("Produk telah habis, isi stok dahulu")
-  const cartItem=cart.find(c=>c.sku===sku)
-  if(cartItem){
-    if(cartItem.qty>=p.qty) return alert("Stok tidak cukup")
-    cartItem.qty+=1
-  }else{
-    cart.push({sku:p.sku,name:p.name,price:p.price,qty:1})
-  }
-  renderCart()
-}
+  const p = products.find(x => x.sku === sku);
+  if (!p) return alert("Produk tidak ditemukan");
+  if (p.qty <= 0) return alert("Produk telah habis, isi stok dahulu");
 
+  // --- AWAL PERBAIKAN ---
+  // Jika ada transaksi pending dari sesi sebelumnya, batalkan saat menambah produk baru.
+  // Ini memastikan user selalu memulai transaksi yang bersih.
+  if (pendingPaidInvoice) {
+    pendingPaidInvoice = null;
+    localStorage.removeItem('pendingPaidInvoice');
+    // Beri tahu user bahwa transaksi lama dibatalkan
+    showToast("Transaksi sebelumnya dibatalkan. Memulai transaksi baru.");
+  }
+  // --- AKHIR PERBAIKAN ---
+
+  const cartItem = cart.find(c => c.sku === sku);
+  if (cartItem) {
+    if (cartItem.qty >= p.qty) return alert("Stok tidak cukup");
+    cartItem.qty += 1;
+  } else {
+    cart.push({ sku: p.sku, name: p.name, price: p.price, qty: 1 });
+  }
+  renderCart();
+}
 function renderCart(){
   const el=document.getElementById("cart")
   const count=document.getElementById("cartCount")
