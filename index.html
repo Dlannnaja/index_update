@@ -1845,8 +1845,7 @@ function finalizePendingSale(){
   localStorage.removeItem('pendingPaidInvoice')
   cart = []
 
-  // 🔥 Tambahkan render() di sini
-  renderCart(); render(); renderFinalStock(); loadRestock()
+  renderFinalStock();
 
   document.getElementById('receiptPreviewModal').style.display = 'none'
   showToast("Penjualan diselesaikan.")
