@@ -1989,6 +1989,12 @@ function printReceipt(t){
   printWindow.print();
 }
   function clearSales() {
+
+  if (sales.length === 0) {
+    showSalesAlert("Tidak ada data yang dapat dihapus, silahkan lakukan penjualan.");
+    return; // Hentikan fungsi di sini jika tidak ada data
+  }
+    
   // konfirmasi sebelum hapus
   if (!confirm("Yakin ingin menghapus semua data laporan penjualan?")) return;
 
