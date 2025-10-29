@@ -2572,13 +2572,6 @@ function loadSales(showNotification = true) {
   }
 }
 
-  // Tampilkan notifikasi berdasarkan hasil pencarian
-  if (foundData) {
-    showToast("✅ Laporan penjualan ditampilkan.");
-  } else {
-    showToast("📭 Tidak ada data penjualan pada rentang tanggal tersebut.");
-  }
-
 /* export only finalized sales */
 function exportSales(){
   const finalized = sales.filter(s => s.finalized)
