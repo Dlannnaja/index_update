@@ -1909,27 +1909,6 @@ function printReceipt(t){
     throw e
   }
 }
-  if(typeof discountTotalPercent !== 'undefined' && discountTotalPercent > 0){
-    html += `<div>Diskon total belanja: ${discountTotalPercent}%</div>`;
-  }
-  html += `<h4 style="text-align:right;margin:6px 0">Total: Rp ${t.total.toLocaleString()}</h4>`
-  html += `</div>`
-
-  const w = window.open("","_blank","width=400,height=600")
-  if(!w) {
-    throw new Error("Popup blocked")
-  }
-  w.document.write(html)
-  w.document.close()
-  w.focus()
-  try{
-    w.print()
-    setTimeout(()=>{ try{ w.close() }catch(e){} }, 1200)
-  }catch(e){
-    try{ w.close() }catch(_) {}
-    throw e
-  }
-}
 
   function printSales() {
   const table = document.getElementById("salesTbl");
