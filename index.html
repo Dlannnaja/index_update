@@ -859,21 +859,16 @@
         <h3>Keranjang (<span id="cartCount2">0</span>)</h3>
         <div id="cart"><i class="muted">Keranjang kosong</i></div>
         <div class="flex" style="margin-top: var(--spacing-md); flex-direction: column; gap: var(--spacing-sm)">
-          
-<div class="note">Total: <strong id="total">Rp 0</strong></div>
+         
+        <div class="note">Total: <strong id="total">Rp 0</strong></div>
 
-<!-- DISCOUNT CONTROLS (side-by-side) -->
-<div style="display:flex;gap:10px;margin-top:8px;align-items:center;">
-  <div style="flex:1;min-width:140px">
-    <label class="muted">Diskon per produk (Rp)</label>
-    <input type="text" id="discountPerProduct" placeholder="Rp 0" oninput="onDiscountPerProductInput(this)" />
-  </div>
-  <div style="flex:1;min-width:140px">
-    <label class="muted">Diskon total belanja (%)</label>
-    <input type="number" id="discountTotalPercent" min="0" max="100" placeholder="10" oninput="applyDiscount()" />
-  </div>
-</div>
-
+        <!-- DISCOUNT CONTROLS (side-by-side) -->
+          <div style="display:flex;gap:10px;margin-top:8px;align-items:center;">
+          <div style="flex:1;min-width:140px">
+            <label class="muted">Diskon total belanja (%)</label>
+              <input type="number" id="discountTotalPercent" min="0" max="100" placeholder="10" oninput="applyDiscount()" />
+          </div>
+          </div>
           <div style="width: 100%">
             <label><input type="checkbox" id="autoPrint" /> Cetak struk otomatis</label>
             <div class="printer-row">
@@ -1035,7 +1030,6 @@ let sales = JSON.parse(localStorage.getItem('sales')||'[]')
 let restocks = JSON.parse(localStorage.getItem('restocks')||'[]')
 let cart = []
 // ====== DISCOUNT VARIABLES & HELPERS ======
-let discountPerProductRp = 0;     // nominal Rp per product (applies per item unit)
 let discountTotalPercent = 0;     // percentage applied to subtotal after per-product discounts
 
 function formatRupiahNumber(n){
@@ -1045,15 +1039,6 @@ function formatRupiahNumber(n){
 function parseRupiahString(s){
   if(!s) return 0;
   return parseInt((s+"").replace(/[^\d]/g,'')) || 0;
-}
-
-// input formatter for per-product rupiah input
-function onDiscountPerProductInput(el){
-  const v = parseRupiahString(el.value);
-  discountPerProductRp = v;
-  // format display
-  el.value = v ? formatRupiahNumber(v) : "";
-  applyDiscount();
 }
 
 function applyDiscount(){
@@ -1067,17 +1052,20 @@ function applyDiscount(){
 function computeCartTotals(){
   let subtotalBefore = 0;
   let perProductDiscountTotal = 0;
-  cart.forEach(c=>{
+
+  cart.forEach(c => {
     const itemSubtotal = c.price * c.qty;
     subtotalBefore += itemSubtotal;
-    // discountPerProductRp applies per unit
-    const itemDiscount = Math.min(itemSubtotal, discountPerProductRp * c.qty);
-    perProductDiscountTotal += itemDiscount;
+    // Hitung diskon berdasarkan properti 'discount' masing-masing item
+    const itemDiscountTotal = Math.min(itemSubtotal, c.discount * c.qty);
+    perProductDiscountTotal += itemDiscountTotal;
   });
+
   const afterPerProduct = subtotalBefore - perProductDiscountTotal;
-  const percentDiscountAmount = Math.round((discountTotalPercent/100) * afterPerProduct);
+  const percentDiscountAmount = Math.round((discountTotalPercent / 100) * afterPerProduct);
   let finalTotal = afterPerProduct - percentDiscountAmount;
-  if(finalTotal < 0) finalTotal = 0;
+  if (finalTotal < 0) finalTotal = 0;
+
   return {
     subtotalBefore,
     perProductDiscountTotal,
@@ -1355,65 +1343,85 @@ function addToCart(sku){
   if (!p) return alert("Produk tidak ditemukan");
   if (p.qty <= 0) return alert("Produk telah habis, isi stok dahulu");
 
-  // --- AWAL PERBAIKAN ---
-  // Jika ada transaksi pending dari sesi sebelumnya, batalkan saat menambah produk baru.
-  // Ini memastikan user selalu memulai transaksi yang bersih.
   if (pendingPaidInvoice) {
     pendingPaidInvoice = null;
     localStorage.removeItem('pendingPaidInvoice');
-    // Beri tahu user bahwa transaksi lama dibatalkan
     showToast("Transaksi sebelumnya dibatalkan. Memulai transaksi baru.");
   }
-  // --- AKHIR PERBAIKAN ---
 
   const cartItem = cart.find(c => c.sku === sku);
   if (cartItem) {
     if (cartItem.qty >= p.qty) return alert("Stok tidak cukup");
     cartItem.qty += 1;
   } else {
-    cart.push({ sku: p.sku, name: p.name, price: p.price, qty: 1 });
+    // Tambahkan properti 'discount: 0' saat produk baru ditambahkan
+    cart.push({ sku: p.sku, name: p.name, price: p.price, qty: 1, discount: 0 });
   }
   renderCart();
 }
-function renderCart(){
-  const el=document.getElementById("cart")
-  const count=document.getElementById("cartCount")
-  const count2=document.getElementById("cartCount2")
-  const checkoutBtn=document.getElementById("checkoutBtn")
-  if(cart.length===0){
-    el.innerHTML='<i class="muted">Keranjang kosong</i>';count.textContent="0";count2.textContent="0"; checkoutBtn.disabled=true;document.getElementById("total").textContent="Rp 0"; return
+  function updateItemDiscount(sku, discountValue) {
+  const item = cart.find(c => c.sku === sku);
+  if (item) {
+    // Pastikan nilai diskon tidak negatif
+    const discount = Math.max(0, parseInt(discountValue) || 0);
+    item.discount = discount;
+    renderCart(); // Render ulang keranjang untuk memperbarui total
   }
-  
-  let html = "<table style='width:100%'>";
+}
+function renderCart(){
+  const el = document.getElementById("cart");
+  const count = document.getElementById("cartCount");
+  const count2 = document.getElementById("cartCount2");
+  const checkoutBtn = document.getElementById("checkoutBtn");
+  if (cart.length === 0) {
+    el.innerHTML = '<i class="muted">Keranjang kosong</i>';
+    count.textContent = "0"; count2.textContent = "0";
+    checkoutBtn.disabled = true;
+    document.getElementById("total").textContent = "Rp 0";
+    return;
+  }
 
-  // compute totals using discount helpers
+  let html = "<table style='width:100%'>";
   const totals = computeCartTotals();
-  cart.forEach((c,i)=>{
-    const orig = c.price * c.qty;
-    const perItemDiscount = Math.min(orig, discountPerProductRp * c.qty);
-    const subtotalAfterPerItem = orig - perItemDiscount;
+
+  cart.forEach((c) => {
+    const originalSubtotal = c.price * c.qty;
+    const itemDiscountTotal = c.discount * c.qty;
+    const finalSubtotal = originalSubtotal - itemDiscountTotal;
 
     html += `
     <tr>
       <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
         ${c.name} <span style="color:#6b7280;">x${c.qty}</span>
-        ${discountPerProductRp > 0 ? `<br><small style='color:#16a34a'>Potongan per item: ${formatRupiahNumber(discountPerProductRp)} / unit</small>` : ""}
       </td>
-      <td style="text-align:right;">Rp ${subtotalAfterPerItem.toLocaleString()}</td>
+      <td style="text-align:right;">Rp ${finalSubtotal.toLocaleString()}</td>
       <td style="text-align:center;">
         <button class="small ghost" onclick="removeFromCart('${c.sku}')">-</button>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding: 0; font-size: 11px;">
+        <div style="display:flex; align-items:center; gap:4px;">
+          <span class="muted">Promo:</span>
+          <input type="number" 
+                 value="${c.discount}" 
+                 onchange="updateItemDiscount('${c.sku}', this.value)"
+                 style="width:80px; padding:2px; font-size:11px; text-align:right;"
+                 placeholder="0">
+          <span class="muted">/unit</span>
+        </div>
       </td>
     </tr>`;
   });
 
   html += "</table>";
 
-  // show per-product discount summary if any
-  if(totals.perProductDiscountTotal > 0){
-    html += `<div style="margin-top:6px;color:#16a34a;font-weight:600">Total potongan per produk: -${formatRupiahNumber(totals.perProductDiscountTotal)}</div>`;
+  // Tampilkan total diskon per produk
+  if (totals.perProductDiscountTotal > 0) {
+    html += `<div style="margin-top:6px;color:#16a34a;font-weight:600">Total potongan promo: -${formatRupiahNumber(totals.perProductDiscountTotal)}</div>`;
   }
-  // show percent discount summary if any
-  if(totals.percentDiscountAmount > 0){
+  // Tampilkan total diskon persen
+  if (totals.percentDiscountAmount > 0) {
     html += `<div style="margin-top:4px;color:#16a34a;font-weight:600">Potongan diskon total: -${formatRupiahNumber(totals.percentDiscountAmount)} (${discountTotalPercent}%)</div>`;
   }
 
@@ -1421,14 +1429,12 @@ function renderCart(){
   count.textContent = cart.length;
   count2.textContent = cart.length;
   checkoutBtn.disabled = false;
-
-  // display final total
   document.getElementById("total").textContent = "Rp " + totals.finalTotal.toLocaleString();
 
-  if(pendingPaidInvoice){
-    document.getElementById("checkoutBtn").textContent = "Selesaikan Penjualan"
+  if (pendingPaidInvoice) {
+    document.getElementById("checkoutBtn").textContent = "Selesaikan Penjualan";
   } else {
-    document.getElementById("checkoutBtn").textContent = "Bayar"
+    document.getElementById("checkoutBtn").textContent = "Bayar";
   }
 }
 
@@ -1472,13 +1478,23 @@ function loadRestock() {
 
   tbody.innerHTML = "";
 
+  // --- AWAL LOGIKA NOTIFIKASI BARU ---
+
+  // 1. Cek apakah sama sekali belum ada data restock
   if (restocks.length === 0) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="6" style="text-align:center;padding:10px" class="muted">Belum ada data restock.</td>`;
     tbody.appendChild(tr);
+    showRestockAlert("📭 Belum ada data restock sama sekali.");
     return;
   }
 
+  // 2. Jika ada data, cek apakah ada yang masuk hari ini
+  // Format tanggal di restocks adalah "YYYY-MM-DD HH:mm:ss", kita ambil bagian tanggalnya saja
+  const today = new Date().toISOString().split('T')[0]; 
+  const hasTodayRestock = restocks.some(r => r.date && r.date.startsWith(today));
+
+  // Tampilkan data di tabel
   restocks.slice().reverse().forEach((r, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1491,6 +1507,14 @@ function loadRestock() {
     `;
     tbody.appendChild(tr);
   });
+
+  // 3. Tampilkan notifikasi berdasarkan hasil pengecekan
+  if (hasTodayRestock) {
+    showRestockAlert("✅ Laporan restok ditampilkan.");
+  } else {
+    showRestockAlert("📭 Belum ada restock barang hari ini.");
+  }
+  // --- AKHIR LOGIKA NOTIFIKASI BARU ---
 }
   
   /* ======== TOMBOL TAMPILKAN ======== */
