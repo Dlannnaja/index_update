@@ -1995,15 +1995,15 @@ function printReceipt(t){
   // hapus semua data penjualan dari localStorage
   localStorage.removeItem("sales");
 
+  // --- PERBAIKAN: Kosongkan variabel di memori juga ---
+  sales = [];
+
   // bersihkan tabel di halaman
   const tbody = document.querySelector("#salesTbl tbody");
   if (tbody) tbody.innerHTML = "";
 
   // tampilkan notifikasi sukses
   showSalesAlert("🗑️ Semua data laporan penjualan berhasil dihapus.");
-
-  // refresh tampilan
-  renderSalesTable();
 }
   function clearSalesByRange() {
   const fromEl = document.getElementById("filterFrom");
@@ -2022,12 +2022,6 @@ function printReceipt(t){
     return;
   }
 
-  const sales = JSON.parse(localStorage.getItem("sales")) || [];
-  if (!sales.length) {
-    showSalesAlert("📭 Tidak ada data penjualan untuk dihapus.");
-    return;
-  }
-
   // filter hanya data di luar rentang (biar yang di range kehapus)
   const kept = sales.filter(s => {
     const d = new Date(s.date || s.dateDisplay || "");
@@ -2037,8 +2031,11 @@ function printReceipt(t){
   // simpan ulang data yang tersisa
   localStorage.setItem("sales", JSON.stringify(kept));
 
+  // --- PERBAIKAN: Perbarui variabel di memori juga ---
+  sales = kept;
+
   // refresh tabel
-  loadSales(); renderSalesTable();
+  loadSales();
 
   // notifikasi sukses
   showSalesAlert("🗑️ Data laporan penjualan dalam rentang tanggal berhasil dihapus.");
@@ -2564,41 +2561,63 @@ function loadSales(showNotification = true) {
   const from = document.getElementById("filterFrom").value;
   const to = document.getElementById("filterTo").value;
   const tbl = document.querySelector("#salesTbl tbody");
+  if (!tbl) return; // Cegah error jika elemen tidak ditemukan
+
   tbl.innerHTML = "";
 
-  let counter = 1;
-  let foundData = false; // Tambahkan penanda untuk mengecek apakah ada data
+  // 1. Validasi: Cek apakah ada filter yang dipilih
+  if (!from && !to) {
+    if (showNotification) {
+      showToast("⚠️ Silahkan pilih rentan tanggal untuk menampilkan laporan penjualan.");
+    }
+    // Tampilkan pesan di tabel
+    tbl.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:10px" class="muted">Pilih filter tanggal untuk melihat laporan.</td></tr>`;
+    return;
+  }
 
-  sales.forEach((s) => {
-    if (!s.finalized) return; // only include finalized sales
+  let counter = 1;
+  let foundData = false;
+
+  // 2. Filter data berdasarkan input
+  let filteredSales = sales.filter(s => s.finalized); // Ambil hanya penjualan yang sudah selesai
+
+  if (from || to) {
+    const startDate = from ? new Date(from) : new Date('1970-01-01');
+    const endDate = to ? new Date(to) : new Date('2999-12-31');
+    endDate.setHours(23, 59, 59, 999);
+
+    filteredSales = filteredSales.filter(s => {
+      const dObj = new Date(s.date);
+      return dObj >= startDate && dObj <= endDate;
+    });
+  }
+
+  // 3. Tampilkan hasil yang sudah difilter
+  if (filteredSales.length === 0) {
+    tbl.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:10px" class="muted">Tidak ada data penjualan pada periode yang dipilih.</td></tr>`;
+    if (showNotification) {
+      showToast("📭 Tidak ada data penjualan pada periode yang dipilih.");
+    }
+    return;
+  }
+
+  // Jika ada data, tampilkan di tabel
+  filteredSales.forEach((s) => {
     const dObj = new Date(s.date);
     const d = s.dateDisplay || dObj.toLocaleString();
-
-    let valid = true;
-    if (from && dObj < new Date(from)) valid = false;
-    if (to && dObj > new Date(to)) valid = false;
-
-    if (valid) {
-      foundData = true; // Tandai bahwa ada data yang cocok
-      tbl.innerHTML += `
-        <tr>
-          <td>${counter}</td>
-          <td>${d}</td>
-          <td>${s.invoice}</td>
-          <td>${s.items.map(x => x.name + " x" + x.qty).join(", ")}</td>
-          <td>Rp ${s.total.toLocaleString()}</td>
-        </tr>`;
-      counter++;
-    }
+    tbl.innerHTML += `
+      <tr>
+        <td>${counter}</td>
+        <td>${d}</td>
+        <td>${s.invoice}</td>
+        <td>${s.items.map(x => x.name + " x" + x.qty).join(", ")}</td>
+        <td>Rp ${s.total.toLocaleString()}</td>
+      </tr>`;
+    counter++;
   });
 
-  // Tampilkan notifikasi berdasarkan hasil pencarian
   if (showNotification) {
-    if (foundData) {
-      showToast("✅ Laporan penjualan ditampilkan.");
-    } else {
-      showToast("📭 Tidak ada data penjualan pada rentang tanggal tersebut.");
-    }
+    showToast("✅ Laporan penjualan ditampilkan.");
   }
 }
 
