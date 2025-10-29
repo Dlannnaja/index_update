@@ -2537,7 +2537,7 @@ document.addEventListener("keydown", function (e) {
 
 /* ---------- REPORTS & CSV ---------- */
 /* loadSales now only shows finalized transactions (as requested) */
-function loadSales(); renderSalesTable(){
+function loadSales() renderSalesTable(){
   const from=document.getElementById("filterFrom").value
   const to=document.getElementById("filterTo").value
   const tbl=document.querySelector("#salesTbl tbody")
