@@ -1468,10 +1468,13 @@ function loadRestock(showNotification = true) {
 
   // 2. Filter data berdasarkan input
   let filteredRestocks = allRestocks;
-  if (from && to) {
-    const startDate = new Date(from);
-    const endDate = new Date(to);
-    endDate.setHours(23, 59, 59, 999); // Sertakan seluruh tanggal 'Sampai'
+
+  if (from || to) {
+    // Jika 'Dari' tidak diisi, gunakan tanggal sangat awal. Jika 'Sampai' tidak diisi, gunakan tanggal sangat akhir.
+    const startDate = from ? new Date(from) : new Date('1970-01-01');
+    const endDate = to ? new Date(to) : new Date('2999-12-31');
+    endDate.setHours(23, 59, 59, 999);
+
     filteredRestocks = allRestocks.filter(r => {
       if (!r.date) return false;
       const restockDate = new Date(r.date);
