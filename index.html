@@ -1746,8 +1746,7 @@ function confirmPayment(){
       dateDisplay,
       items: JSON.parse(JSON.stringify(cart)), // snapshot of items
       total,
-      // discount details recorded
-      discountPerProductRp: discountPerProductRp,
+      // --- PERBAIKAN: Hapus diskonPerProductRp, gunakan data dari item ---
       discountTotalPercent: discountTotalPercent,
       totalsBreakdown: {
         subtotalBefore: totals.subtotalBefore,
@@ -1804,8 +1803,8 @@ function openReceiptPreview(invoice){
       <tbody>`
   tx.items.forEach(i=>{
     const normal = i.price * i.qty;
-    // per-item discount applied (nominal per unit)
-    const perItemDiscount = Math.min(normal, (tx.discountPerProductRp || 0) * i.qty);
+    // --- PERBAIKAN: Gunakan diskon dari item (i.discount) ---
+    const perItemDiscount = Math.min(normal, (i.discount || 0) * i.qty);
     const afterPerItem = normal - perItemDiscount;
     itemsHtml += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right"><del>Rp ${normal.toLocaleString()}</del><br/>Rp ${afterPerItem.toLocaleString()}${perItemDiscount>0?` <small style=\"color:#16a34a\">(-${formatRupiahNumber(perItemDiscount)})</small>`:''}</td></tr>`;
   })
@@ -1827,7 +1826,7 @@ function openReceiptPreview(invoice){
     <div style="margin-top:6px" class="muted">Metode: ${tx.method || '-'}</div>
   `
   document.getElementById('receiptPreviewModal').style.display = 'flex'
-  }
+}
 
 /* close receipt preview */
 function closeReceiptPreview(){
@@ -1919,7 +1918,8 @@ function printReceipt(t){
   html += `<tr><th align="left">Nama</th><th>Qty</th><th align="right">Harga</th></tr>`
   t.items.forEach(i=>{
     const normal = i.price * i.qty;
-    const perItemDiscount = Math.min(normal, (t.discountPerProductRp || 0) * i.qty);
+    // --- PERBAIKAN: Gunakan diskon dari item (i.discount) ---
+    const perItemDiscount = Math.min(normal, (i.discount || 0) * i.qty);
     const afterPerItem = normal - perItemDiscount;
     html += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right"><del>Rp ${normal.toLocaleString()}</del><br/>Rp ${afterPerItem.toLocaleString()}${perItemDiscount>0?` (-${formatRupiahNumber(perItemDiscount)})`:''}</td></tr>`
   })
