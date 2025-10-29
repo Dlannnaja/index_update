@@ -1231,6 +1231,33 @@ function updateRestockDropdown(){
   })
 }
 
+function renderSalesTable(){
+  const tbody = document.querySelector("#salesTbl tbody");
+  tbody.innerHTML = "";
+  const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
+  if(!allSales.length){
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:10px" class="muted">Belum ada data penjualan.</td></tr>';
+    return;
+  }
+  allSales.slice().reverse().forEach((s, idx)=>{
+    // build item summary string
+    const itemNames = s.items.map(it=>`${it.name} x${it.qty}`).join(", ");
+    const before = s.totalsBreakdown ? s.totalsBreakdown.subtotalBefore : s.items.reduce((a,i)=>a + i.price*i.qty,0);
+    const perProd = s.totalsBreakdown ? s.totalsBreakdown.perProductDiscountTotal : 0;
+    const pct = s.totalsBreakdown ? s.totalsBreakdown.percentDiscountAmount : 0;
+    const finalT = s.totalsBreakdown ? s.totalsBreakdown.finalTotal : s.total;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${idx+1}</td>
+      <td>${s.dateDisplay || s.date}</td>
+      <td>${s.invoice}</td>
+      <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${itemNames}</td>
+      <td style="text-align:right">Rp ${before.toLocaleString()}</td>
+      <td style="text-align:right;color:#16a34a">-Rp ${perProd.toLocaleString()}</td>
+      <td style="text-align:right;color:#16a34a">-Rp ${pct.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:700">Rp ${finalT.toLocaleString()}</td>`;
+    tbody.appendChild(tr);
+  });
+//}//
 /* ---------- restock ---------- */
 function restockProduct(event) {
   if (event) event.preventDefault();
@@ -2556,34 +2583,6 @@ function exportSales(){
   });
 
   downloadCSV(csv, "laporan_penjualan.csv");
-}
-
-function renderSalesTable(){
-  const tbody = document.querySelector("#salesTbl tbody");
-  tbody.innerHTML = "";
-  const allSales = JSON.parse(localStorage.getItem('sales') || '[]');
-  if(!allSales.length){
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:10px" class="muted">Belum ada data penjualan.</td></tr>';
-    return;
-  }
-  allSales.slice().reverse().forEach((s, idx)=>{
-    // build item summary string
-    const itemNames = s.items.map(it=>`${it.name} x${it.qty}`).join(", ");
-    const before = s.totalsBreakdown ? s.totalsBreakdown.subtotalBefore : s.items.reduce((a,i)=>a + i.price*i.qty,0);
-    const perProd = s.totalsBreakdown ? s.totalsBreakdown.perProductDiscountTotal : 0;
-    const pct = s.totalsBreakdown ? s.totalsBreakdown.percentDiscountAmount : 0;
-    const finalT = s.totalsBreakdown ? s.totalsBreakdown.finalTotal : s.total;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${idx+1}</td>
-      <td>${s.dateDisplay || s.date}</td>
-      <td>${s.invoice}</td>
-      <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${itemNames}</td>
-      <td style="text-align:right">Rp ${before.toLocaleString()}</td>
-      <td style="text-align:right;color:#16a34a">-Rp ${perProd.toLocaleString()}</td>
-      <td style="text-align:right;color:#16a34a">-Rp ${pct.toLocaleString()}</td>
-      <td style="text-align:right;font-weight:700">Rp ${finalT.toLocaleString()}</td>`;
-    tbody.appendChild(tr);
-  });
 }
 
 /* ---------- helper downloadCSV ---------- */
